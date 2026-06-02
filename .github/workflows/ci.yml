@@ -19,7 +19,9 @@ jobs:
       - name: Install dependencies
         run: |
           pip install flake8 pytest
-          # TODO: Install project specific requirements
+          pip install -r data_pipeline/requirements.txt
+          pip install -r model_serving/requirements.txt
+          pip install -r drift_monitoring/requirements.txt
           
       - name: Run Linter
         run: flake8 .
