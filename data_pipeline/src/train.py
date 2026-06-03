@@ -9,6 +9,7 @@ import xgboost as xgb
 import joblib
 from sklearn.metrics import accuracy_score
 import tempfile
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -177,6 +178,11 @@ def train(data_path: str, params: dict):
             logger.info(f"{model_name} accuracy: {accuracy:.4f}")
 
             mlflow.sklearn.log_model(model, artifact_path="model")
+
+            os.makedirs("models", exist_ok=True)
+            local_model_path = f"models/{model_name}.joblib"
+            joblib.dump(model, local_model_path)
+            mlflow.log_artifact(local_model_path, artifact_path="local_models")
 
             with tempfile.TemporaryDirectory() as temp_dir:
                 label_encoder_path = f"{temp_dir}/label_encoder.joblib"

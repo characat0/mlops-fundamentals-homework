@@ -90,4 +90,10 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
 
 if __name__ == "__main__":
-    evaluate_and_register()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--train_data", type=str, default="data/train.csv")
+    args = parser.parse_args()
+
+    evaluate_and_register(args.train_data)
