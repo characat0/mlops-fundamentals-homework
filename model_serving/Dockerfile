@@ -18,6 +18,10 @@ RUN pip install -r requirements.txt
 #
 # After this step, load the model in predict_genre() using:
 #   mlflow.sklearn.load_model("./models")
+ARG MLFLOW_TRACKING_URI=http://localhost:5000
+ENV MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
+RUN mlflow models download -m "models:/spotify-genre-classifier@champion" \
+    -d ./models --no-directory
 
 COPY ./app ./app
 RUN touch /app/app/__init__.py
