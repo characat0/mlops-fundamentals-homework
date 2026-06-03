@@ -1,15 +1,34 @@
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
+from datetime import datetime
 import json
 import logging
 import os
 from pathlib import Path
+import mlflow.sklearn
+import pandas as pd
 
 app = FastAPI(title="Spotify Genre Classifier API", version="1.0.0")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+FEATURE_NAMES = [
+    "danceability",
+    "energy",
+    "key",
+    "loudness",
+    "mode",
+    "speechiness",
+    "acousticness",
+    "instrumentalness",
+    "liveness",
+    "valence",
+    "tempo",
+    "duration_ms",
+]
+
+_model = None
 
 # TODO: Define the SpotifyFeatures Pydantic model.
 #
@@ -22,6 +41,8 @@ logger = logging.getLogger(__name__)
 #   mode (int), speechiness (float), acousticness (float),
 #   instrumentalness (float), liveness (float), valence (float),
 #   tempo (float), duration_ms (int)
+
+
 class SpotifyFeatures(BaseModel):
     danceability: float
     energy: float
@@ -62,6 +83,30 @@ async def log_requests(request: Request, call_next):
              request = Request(request.scope, receive)
       6. Call response = await call_next(request) and return it
     """
+    if request.method == "POST" and request.url.path == "/predict":
+        body_bytes = await request.body()
+
+        try:
+            payload = json.loads(body_bytes.decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            payload = {
+                "raw_body": body_bytes.decode("utf-8", errors="replace"),
+            }
+
+        payload["timestamp"] = datetime.utcnow().isoformat()
+
+        logs_dir = Path("logs")
+        logs_dir.mkdir(parents=True, exist_ok=True)
+
+        log_path = logs_dir / "api_requests.jsonl"
+        with log_path.open("a", encoding="utf-8") as log_file:
+            log_file.write(json.dumps(payload) + "\n")
+
+        async def receive():
+            return {"type": "http.request", "body": body_bytes}
+
+        request = Request(request.scope, receive)
+
     response = await call_next(request)
     return response
 
@@ -83,6 +128,27 @@ def predict(features: SpotifyFeatures) -> PredictionResponse:
     except Exception as e:
         logger.error(f"Prediction failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Prediction failed")
+
+
+def get_model():
+    """Load the baked MLflow model lazily from disk."""
+    global _model
+
+    if _model is not None:
+        return _model
+
+    model_path = os.getenv("MODEL_PATH", "./models")
+
+    if not Path(model_path).exists():
+        logger.warning(
+            "Model path %s does not exist. Returning placeholder predictions.",
+            model_path,
+        )
+        return None
+
+    _model = mlflow.sklearn.load_model(model_path)
+    logger.info("Loaded model from %s", model_path)
+    return _model
 
 
 def predict_genre(features: SpotifyFeatures) -> PredictionResponse:
@@ -122,4 +188,36 @@ def predict_genre(features: SpotifyFeatures) -> PredictionResponse:
 
     For now, returns a placeholder so API tests pass:
     """
-    return PredictionResponse(genre="Pop", confidence=0.85)
+    model = get_model()
+
+    if model is None:
+        return PredictionResponse(genre="Pop", confidence=0.85)
+
+    feature_frame = pd.DataFrame(
+        [features.model_dump()],
+        columns=FEATURE_NAMES,
+    )
+
+    scaler = getattr(model, "scaler_", None)
+    if scaler is not None:
+        model_input = scaler.transform(feature_frame)
+    else:
+        model_input = feature_frame
+
+    prediction = model.predict(model_input)[0]
+
+    genre_classes = getattr(model, "genre_classes_", None)
+    if genre_classes is not None:
+        predicted_genre = str(genre_classes[int(prediction)])
+    else:
+        predicted_genre = str(prediction)
+
+    confidence = 0.0
+    if hasattr(model, "predict_proba"):
+        probabilities = model.predict_proba(model_input)
+        confidence = float(probabilities[0].max())
+
+    return PredictionResponse(
+        genre=predicted_genre,
+        confidence=confidence,
+    )

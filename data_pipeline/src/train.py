@@ -153,14 +153,16 @@ def train(data_path: str, params: dict):
         if model_name == "logistic_regression":
             model = LogisticRegression(**model_params)
             X_to_use = X_scaled
-            log_model = mlflow.sklearn.log_model
         elif model_name == "xgboost":
             model = xgb.XGBClassifier(**model_params)
             X_to_use = X
-            log_model = mlflow.xgboost.log_model
         else:
             logger.warning(f"Skipping unknown model type: {model_name}")
             continue
+
+        model.feature_names_ = audio_features
+        model.genre_classes_ = label_encoder.classes_.tolist()
+        model.scaler_ = scaler if model_name == "logistic_regression" else None
 
         with mlflow.start_run(run_name=model_name):
             mlflow.log_param("model", model_name)
@@ -174,7 +176,7 @@ def train(data_path: str, params: dict):
             mlflow.log_metric("accuracy", accuracy)
             logger.info(f"{model_name} accuracy: {accuracy:.4f}")
 
-            log_model(model, artifact_path="model")
+            mlflow.sklearn.log_model(model, artifact_path="model")
 
             with tempfile.TemporaryDirectory() as temp_dir:
                 label_encoder_path = f"{temp_dir}/label_encoder.joblib"
