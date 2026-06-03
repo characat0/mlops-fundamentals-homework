@@ -48,10 +48,10 @@ git push origin solution/<your-name>
 2. Click **Compare & pull request** (GitHub will show this banner automatically after a push).
 3. Set the **base repository** to the course repo and **base branch** to `main`.
 4. Title your PR: `[Homework] <Your Full Name>` (e.g., `[Homework] Maria Garcia`).
-5. In the description, paste your completed [[GRADING_RUBRIC#Submission Checklist|Submission Checklist]].
+5. In the description, paste your completed [Submission Checklist](GRADING_RUBRIC.md).
 6. Click **Create pull request**.
 
-> **The CI pipeline runs automatically on every push to your PR.** A green checkmark means your tests and linter pass — this is worth 1 point. See [[GRADING_RUBRIC#4.3 GitHub Actions|§4.3 GitHub Actions]].
+> **The CI pipeline runs automatically on every push to your PR.** A green checkmark means your tests and linter pass — this is worth 1 point. See [§4.3 GitHub Actions](GRADING_RUBRIC.md#43-github-actions-1-point).
 
 ---
 
@@ -161,9 +161,9 @@ mlflow server --host 0.0.0.0 --port 5000
 
 ## Implementation Checklist
 
-Every item below maps to a specific TODO in the code. Complete them in order — each stage feeds the next. Point values reference the [[GRADING_RUBRIC]].
+Every item below maps to a specific TODO in the code. Complete them in order — each stage feeds the next. Point values reference the [GRADING_RUBRIC](GRADING_RUBRIC.md).
 
-### Stage 1 — Data Pipeline (`data_pipeline/`) · *6 pts* · [[GRADING_RUBRIC#1. Data Pipeline (6 points)|Rubric §1]]
+### Stage 1 — Data Pipeline (`data_pipeline/`) · *6 pts* · [Rubric §1](GRADING_RUBRIC.md#1-data-pipeline-6-points)
 
 **`src/process.py` → `process_data()`**
 - [ ] Split `df` into `train_df` (year ≤ 2010) and `prod_df` (year > 2010)
@@ -185,7 +185,7 @@ Every item below maps to a specific TODO in the code. Complete them in order —
 
 ---
 
-### Stage 2 — Model Serving (`model_serving/`) · *5 pts* · [[GRADING_RUBRIC#2. Model Serving (5 points)|Rubric §2]]
+### Stage 2 — Model Serving (`model_serving/`) · *5 pts* · [Rubric §2](GRADING_RUBRIC.md#2-model-serving-5-points)
 
 **`app/main.py` → `SpotifyFeatures`**
 - [ ] Add the audio feature fields with correct types to the Pydantic model
@@ -208,7 +208,7 @@ Every item below maps to a specific TODO in the code. Complete them in order —
 
 ---
 
-### Stage 3 — Drift Monitoring (`drift_monitoring/`) · *3 pts* · [[GRADING_RUBRIC#3. Drift Monitoring (3 points)|Rubric §3]]
+### Stage 3 — Drift Monitoring (`drift_monitoring/`) · *3 pts* · [Rubric §3](GRADING_RUBRIC.md#3-drift-monitoring-3-points)
 
 **`src/analyze_drift.py` → `run_ks_analysis()`** *(shared by both modes)*
 - [ ] For each feature in `features_to_test`, run `scipy.stats.ks_2samp(train_values, prod_values)`
@@ -224,7 +224,7 @@ Every item below maps to a specific TODO in the code. Complete them in order —
 
 ## Your Tasks
 
-### 1. Data Pipeline & Orchestration (DVC + MLflow) · [[GRADING_RUBRIC#1. Data Pipeline (6 points)|Rubric §1]]
+### 1. Data Pipeline & Orchestration (DVC + MLflow) · [Rubric §1](GRADING_RUBRIC.md#1-data-pipeline-6-points)
 Located in `data_pipeline/`.
 
 #### 1.1 Load (`src/load.py`)
@@ -238,7 +238,7 @@ Located in `data_pipeline/`.
                               # Then run: dvc repro
                               # After repro, dvc.lock will record the hash
   ```
-  If the hash in `dvc.lock` matches `songs.csv.dvc`, you have the right file. See [[GRADING_RUBRIC#1.1 Dataset Integrity (1 point)|§1.1 Dataset Integrity]].
+  If the hash in `dvc.lock` matches `songs.csv.dvc`, you have the right file. See [§1.1 Dataset Integrity](GRADING_RUBRIC.md#11-dataset-integrity-1-point).
 
 #### 1.2 Process (`src/process.py`)
 - **Status**: Skeleton provided — implement the split and save logic (see TODOs in `process_data()`)
@@ -283,7 +283,7 @@ Located in `data_pipeline/`.
   dvc repro
   ```
 
-### 2. Model Serving (FastAPI + Docker) · [[GRADING_RUBRIC#2. Model Serving (5 points)|Rubric §2]]
+### 2. Model Serving (FastAPI + Docker) · [Rubric §2](GRADING_RUBRIC.md#2-model-serving-5-points)
 Located in `model_serving/`.
 
 #### 2.1 API Implementation (`app/main.py`)
@@ -336,7 +336,7 @@ mlflow.sklearn.load_model("models:/champion@champion/production")
 
 If the model loading fails with "Connection refused" in the Docker container, verify that MLflow is accessible from the container's network context.
 
-### 3. Drift Monitoring · [[GRADING_RUBRIC#3. Drift Monitoring (3 points)|Rubric §3]]
+### 3. Drift Monitoring · [Rubric §3](GRADING_RUBRIC.md#3-drift-monitoring-3-points)
 Located in `drift_monitoring/`.
 
 The script supports two modes — run both to get the full picture.
@@ -378,7 +378,7 @@ python src/analyze_drift.py \
   --output online_drift_report.json
 ```
 
-### 4. CI/CD (GitHub Actions) · [[GRADING_RUBRIC#4. Testing & CI/CD (4 points)|Rubric §4]]
+### 4. CI/CD (GitHub Actions) · [Rubric §4](GRADING_RUBRIC.md#4-testing--cicd-4-points)
 Located in `.github/workflows/ci.yml`.
 
 #### 4.1 Pipeline Configuration
@@ -393,21 +393,21 @@ Located in `.github/workflows/ci.yml`.
 
 ## Submission Checklist
 
-Review the full point breakdown in [[GRADING_RUBRIC]] before submitting.
+Review the full point breakdown in [GRADING_RUBRIC](GRADING_RUBRIC.md) before submitting.
 
 - [ ] All functions in `src/*.py` are implemented (no `pass` statements)
 - [ ] `params.yaml` has realistic hyperparameters
-- [ ] `dvc repro` runs without errors in `data_pipeline/` · [[GRADING_RUBRIC#1.5 DVC Pipeline (0.5 points)|§1.5]]
-- [ ] `pytest` passes for both `data_pipeline/tests/` and `model_serving/tests/` · [[GRADING_RUBRIC#4.1 Unit Tests (2 points)|§4.1]]
-- [ ] `flake8 .` shows no major style violations · [[GRADING_RUBRIC#4.2 Code Quality (1 point)|§4.2]]
-- [ ] MLflow server has runs logged with metrics and models · [[GRADING_RUBRIC#1.3 Train Script (2 points)|§1.3]]
-- [ ] Best model is registered with `@champion` alias · [[GRADING_RUBRIC#1.4 Evaluate Script (1 point)|§1.4]]
-- [ ] API returns predictions with valid payloads · [[GRADING_RUBRIC#2.1 API Implementation (3 points)|§2.1]]
-- [ ] API logs requests to `logs/api_requests.jsonl` · [[GRADING_RUBRIC#2.1 API Implementation (3 points)|§2.1]]
-- [ ] Dockerfile builds successfully · [[GRADING_RUBRIC#2.3 Dockerfile (1 point)|§2.3]]
-- [ ] Drift monitoring script runs without errors · [[GRADING_RUBRIC#3. Drift Monitoring (3 points)|§3]]
-- [ ] GitHub Actions workflow passes (green checkmark on PR) · [[GRADING_RUBRIC#4.3 GitHub Actions (1 point)|§4.3]]
-- [ ] All TODO comments in your code are addressed or justified · [[GRADING_RUBRIC#5.1 Code Quality (1 point)|§5.1]]
+- [ ] `dvc repro` runs without errors in `data_pipeline/` · [§1.5](GRADING_RUBRIC.md#15-dvc-pipeline-05-points)
+- [ ] `pytest` passes for both `data_pipeline/tests/` and `model_serving/tests/` · [§4.1](GRADING_RUBRIC.md#41-unit-tests-2-points)
+- [ ] `flake8 .` shows no major style violations · [§4.2](GRADING_RUBRIC.md#42-code-quality-1-point)
+- [ ] MLflow server has runs logged with metrics and models · [§1.3](GRADING_RUBRIC.md#13-train-script-2-points)
+- [ ] Best model is registered with `@champion` alias · [§1.4](GRADING_RUBRIC.md#14-evaluate-script-1-point)
+- [ ] API returns predictions with valid payloads · [§2.1](GRADING_RUBRIC.md#21-api-implementation-3-points)
+- [ ] API logs requests to `logs/api_requests.jsonl` · [§2.1](GRADING_RUBRIC.md#21-api-implementation-3-points)
+- [ ] Dockerfile builds successfully · [§2.3](GRADING_RUBRIC.md#23-dockerfile-1-point)
+- [ ] Drift monitoring script runs without errors · [§3](GRADING_RUBRIC.md#3-drift-monitoring-3-points)
+- [ ] GitHub Actions workflow passes (green checkmark on PR) · [§4.3](GRADING_RUBRIC.md#43-github-actions-1-point)
+- [ ] All TODO comments in your code are addressed or justified · [§5.1](GRADING_RUBRIC.md#51-code-quality-1-point)
 - [ ] PR is open against the course repo `main` branch with title `[Homework] <Your Full Name>`
 
 ---
@@ -565,15 +565,15 @@ docker run -p 8000:8000 spotify-api:latest
 
 ## Grading Rubric
 
-Full point breakdown is in [[GRADING_RUBRIC]] (20 points total).
+Full point breakdown is in [GRADING_RUBRIC](GRADING_RUBRIC.md) (20 points total).
 
 | Component | Points |
 |-----------|--------|
-| [[GRADING_RUBRIC#1. Data Pipeline (6 points)\|Data Pipeline]] | 6 |
-| [[GRADING_RUBRIC#2. Model Serving (5 points)\|Model Serving]] | 5 |
-| [[GRADING_RUBRIC#3. Drift Monitoring (3 points)\|Drift Monitoring]] | 3 |
-| [[GRADING_RUBRIC#4. Testing & CI/CD (4 points)\|Testing & CI/CD]] | 4 |
-| [[GRADING_RUBRIC#5. Documentation & Code Quality (2 points)\|Documentation]] | 2 |
+| [Data Pipeline](GRADING_RUBRIC.md#1-data-pipeline-6-points) | 6 |
+| [Model Serving](GRADING_RUBRIC.md#2-model-serving-5-points) | 5 |
+| [Drift Monitoring](GRADING_RUBRIC.md#3-drift-monitoring-3-points) | 3 |
+| [Testing & CI/CD](GRADING_RUBRIC.md#4-testing--cicd-4-points) | 4 |
+| [Documentation](GRADING_RUBRIC.md#5-documentation--code-quality-2-points) | 2 |
 | **TOTAL** | **20** |
 
 ---
