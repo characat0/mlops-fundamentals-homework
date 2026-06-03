@@ -74,3 +74,4 @@ htmlcov/
 .tmp/
 tmp/
 *.log
+drift_monitoring/*_drift_report.json
