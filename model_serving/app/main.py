@@ -73,6 +73,7 @@ async def log_requests(request: Request, call_next):
 def health_check() -> dict:
     return {"status": "healthy"}
 
+
 @app.post("/predict", response_model=PredictionResponse)
 def predict(features: SpotifyFeatures) -> PredictionResponse:
     """Predict Spotify track genre from audio features."""
