@@ -52,6 +52,29 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
     #   1. Call client.create_model_version() to register model_uri under model_name
     #   2. Call client.set_registered_model_alias() to tag that version as "champion"
 
+    try:
+        client.get_registered_model(model_name)
+    except mlflow.exceptions.MlflowException:
+        client.create_registered_model(model_name)
+
+    model_version = client.create_model_version(
+        name=model_name,
+        source=model_uri,
+        run_id=best_run.info.run_id,
+    )
+
+    client.set_registered_model_alias(
+        name=model_name,
+        alias="champion",
+        version=model_version.version,
+    )
+
+    logger.info(
+        "Registered model %s version %s as @champion",
+        model_name,
+        model_version.version,
+    )
+
     metrics = {
         "best_run_id": best_run.info.run_id,
         "best_accuracy": best_accuracy,
