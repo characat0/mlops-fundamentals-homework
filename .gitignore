@@ -5,10 +5,15 @@ data/raw.csv
 data/train.csv
 data/prod_sim.csv
 data/
+data_pipeline/data/
+data_pipeline/models/
+data_pipeline/songs.csv
+data_pipeline/artists.csv
 
 # Models and artifacts
 models/
 mlruns/
+mlflow.db
 *.pkl
 *.joblib
 *.joblib.z

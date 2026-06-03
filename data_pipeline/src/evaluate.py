@@ -28,7 +28,9 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
     client = mlflow.tracking.MlflowClient()
 
-    experiment = client.get_experiment_by_name(None) or client.get_experiment("0")
+    experiment = client.get_experiment("0")
+    if experiment is None:
+        raise RuntimeError("Default MLflow experiment with ID 0 was not found.")
     logger.info(f"Searching runs in experiment: {experiment.name}")
 
     runs = client.search_runs(
