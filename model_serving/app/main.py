@@ -23,7 +23,18 @@ logger = logging.getLogger(__name__)
 #   instrumentalness (float), liveness (float), valence (float),
 #   tempo (float), duration_ms (int)
 class SpotifyFeatures(BaseModel):
-    pass
+    danceability: float
+    energy: float
+    key: int
+    loudness: float
+    mode: int
+    speechiness: float
+    acousticness: float
+    instrumentalness: float
+    liveness: float
+    valence: float
+    tempo: float
+    duration_ms: int
 
 
 class PredictionResponse(BaseModel):
@@ -58,7 +69,9 @@ async def log_requests(request: Request, call_next):
 # TODO: Implement the GET /health endpoint.
 #   It should return {"status": "healthy"} with a 200 status code.
 #   This is used by load balancers and CI checks to verify the API is up.
-
+@app.get("/health")
+def health_check() -> dict:
+    return {"status": "healthy"}
 
 @app.post("/predict", response_model=PredictionResponse)
 def predict(features: SpotifyFeatures) -> PredictionResponse:
