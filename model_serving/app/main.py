@@ -137,7 +137,7 @@ def get_model():
     if _model is not None:
         return _model
 
-    model_path = os.getenv("MODEL_PATH", "./models")
+    model_path = os.getenv("MODEL_PATH", "./models/model")
 
     if not Path(model_path).exists():
         logger.warning(
