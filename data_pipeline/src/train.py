@@ -7,6 +7,9 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 import xgboost as xgb
 import joblib
+from sklearn.metrics import accuracy_score
+import tempfile
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -48,10 +51,30 @@ def train(data_path: str, params: dict):
     # FEATURE SELECTION:
     # Students should select features from the Kaggle dataset.
     # Drop all metadata and non-audio columns:
-    # You can use the lyrics column if you want, but it requires additional text processing and may not be
-    # necessary for good performance.
+    # You can use the lyrics column if you want, but it
+    # requires additional text processing and may not
+    # be necessary for good performance.
     # Target is 'genre', features are audio features
-    X = df.drop(["genre", "year"], axis=1, errors='ignore')
+
+    audio_features = [
+        "danceability",
+        "energy",
+        "key",
+        "loudness",
+        "mode",
+        "speechiness",
+        "acousticness",
+        "instrumentalness",
+        "liveness",
+        "valence",
+        "tempo",
+        "duration_ms",
+    ]
+    missing_features = [col for col in audio_features if col not in df.columns]
+    if missing_features:
+        raise ValueError(f"Missing required audio features: {missing_features}")
+
+    X = df[audio_features]
     y = df["genre"]
 
     logger.info(f"Features shape: {X.shape}, Target shape: {y.shape}")
@@ -62,6 +85,9 @@ def train(data_path: str, params: dict):
     # This is required for sklearn models which expect numeric target values.
     # TODO: Encode genre labels (use LabelEncoder from sklearn)
 
+    label_encoder = LabelEncoder()
+    y_encoded = label_encoder.fit_transform(y)
+
     # SCALING:
     # Use StandardScaler for LogisticRegression to standardize features (zero mean, unit variance).
     # XGBoost handles feature scaling internally, so do NOT scale features when using XGBoost.
@@ -69,6 +95,8 @@ def train(data_path: str, params: dict):
     # - For LogisticRegression: scale the features before training
     # - For XGBoost: use original (unscaled) features
     # TODO: Scale features using StandardScaler
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
 
     # Get hyperparameters
     train_params = params.get("train", {})
@@ -119,6 +147,52 @@ def train(data_path: str, params: dict):
     #  6. Log metrics to MLflow
     #  7. Log model artifact with appropriate MLflow function
     #  8. End run
+
+    for model_name, model_params in train_params.items():
+        logger.info(f"Training model: {model_name}")
+
+        if model_name == "logistic_regression":
+            model = LogisticRegression(**model_params)
+            X_to_use = X_scaled
+        elif model_name == "xgboost":
+            model = xgb.XGBClassifier(**model_params)
+            X_to_use = X
+        else:
+            logger.warning(f"Skipping unknown model type: {model_name}")
+            continue
+
+        model.feature_names_ = audio_features
+        model.genre_classes_ = label_encoder.classes_.tolist()
+        model.scaler_ = scaler if model_name == "logistic_regression" else None
+
+        with mlflow.start_run(run_name=model_name):
+            mlflow.log_param("model", model_name)
+            mlflow.log_params(model_params)
+
+            model.fit(X_to_use, y_encoded)
+
+            y_pred = model.predict(X_to_use)
+            accuracy = accuracy_score(y_encoded, y_pred)
+
+            mlflow.log_metric("accuracy", accuracy)
+            logger.info(f"{model_name} accuracy: {accuracy:.4f}")
+
+            mlflow.sklearn.log_model(model, artifact_path="model")
+
+            os.makedirs("models", exist_ok=True)
+            local_model_path = f"models/{model_name}.joblib"
+            joblib.dump(model, local_model_path)
+            mlflow.log_artifact(local_model_path, artifact_path="local_models")
+
+            with tempfile.TemporaryDirectory() as temp_dir:
+                label_encoder_path = f"{temp_dir}/label_encoder.joblib"
+                scaler_path = f"{temp_dir}/scaler.joblib"
+
+                joblib.dump(label_encoder, label_encoder_path)
+                joblib.dump(scaler, scaler_path)
+
+                mlflow.log_artifact(label_encoder_path, artifact_path="preprocessing")
+                mlflow.log_artifact(scaler_path, artifact_path="preprocessing")
 
 
 if __name__ == "__main__":

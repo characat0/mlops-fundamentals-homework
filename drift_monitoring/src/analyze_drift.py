@@ -53,11 +53,37 @@ def run_ks_analysis(train_df: pd.DataFrame, prod_df: pd.DataFrame, output_path: 
     #   5. Increment drift_results["features_with_drift"] and append feature name to
     #      drift_results["drifted_features"] if drift was detected
 
+    for feature in features_to_test:
+        train_values = train_df[feature].dropna()
+        prod_values = prod_df[feature].dropna()
+
+        if train_values.empty or prod_values.empty:
+            logger.warning("Skipping %s because one sample is empty", feature)
+            continue
+
+        ks_statistic, p_value = stats.ks_2samp(train_values, prod_values)
+        drift_detected = p_value < 0.05
+
+        drift_results["details"][feature] = {
+            "ks_statistic": float(ks_statistic),
+            "p_value": float(p_value),
+            "drift_detected": bool(drift_detected),
+            "train_mean": float(train_values.mean()),
+            "prod_mean": float(prod_values.mean()),
+        }
+
+        if drift_detected:
+            drift_results["features_with_drift"] += 1
+            drift_results["drifted_features"].append(feature)
+
     drifted = drift_results["features_with_drift"]
     total = len(features_to_test)
     drift_results["drift_percentage"] = (drifted / total * 100) if total > 0 else 0
-    drift_results["status"] = "DRIFT_DETECTED" if drift_results["drift_percentage"] > 20 else "NORMAL"
 
+    if drift_results["drift_percentage"] > 20:
+        drift_results["status"] = "DRIFT_DETECTED"
+    else:
+        drift_results["status"] = "NORMAL"
     logger.info(f"Status: {drift_results['status']} "
                 f"({drifted}/{total} features drifted)")
 

@@ -28,7 +28,9 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
     client = mlflow.tracking.MlflowClient()
 
-    experiment = client.get_experiment_by_name(None) or client.get_experiment("0")
+    experiment = client.get_experiment("0")
+    if experiment is None:
+        raise RuntimeError("Default MLflow experiment with ID 0 was not found.")
     logger.info(f"Searching runs in experiment: {experiment.name}")
 
     runs = client.search_runs(
@@ -52,6 +54,29 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
     #   1. Call client.create_model_version() to register model_uri under model_name
     #   2. Call client.set_registered_model_alias() to tag that version as "champion"
 
+    try:
+        client.get_registered_model(model_name)
+    except mlflow.exceptions.MlflowException:
+        client.create_registered_model(model_name)
+
+    model_version = client.create_model_version(
+        name=model_name,
+        source=model_uri,
+        run_id=best_run.info.run_id,
+    )
+
+    client.set_registered_model_alias(
+        name=model_name,
+        alias="champion",
+        version=model_version.version,
+    )
+
+    logger.info(
+        "Registered model %s version %s as @champion",
+        model_name,
+        model_version.version,
+    )
+
     metrics = {
         "best_run_id": best_run.info.run_id,
         "best_accuracy": best_accuracy,
@@ -67,4 +92,10 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
 
 if __name__ == "__main__":
-    evaluate_and_register()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--train_data", type=str, default="data/train.csv")
+    args = parser.parse_args()
+
+    evaluate_and_register(args.train_data)

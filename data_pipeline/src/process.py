@@ -42,10 +42,31 @@ def process_data(
     #
     # Log the size of each split so you can sanity-check the ratio.
 
+    train_df = df[df["year"] <= year_threshold].copy()
+    prod_df = df[df["year"] > year_threshold].copy()
+
+    logger.info("Training split shape: %s", train_df.shape)
+    logger.info("Production split shape: %s", prod_df.shape)
+
     # TODO: Save both splits to CSV (index=False).
     #   Create parent directories first with os.makedirs(..., exist_ok=True).
     #   train_df → train_output
     #   prod_df  → prod_output
+
+    train_dir = os.path.dirname(train_output)
+    prod_dir = os.path.dirname(prod_output)
+
+    if train_dir:
+        os.makedirs(train_dir, exist_ok=True)
+
+    if prod_dir:
+        os.makedirs(prod_dir, exist_ok=True)
+
+    train_df.to_csv(train_output, index=False)
+    prod_df.to_csv(prod_output, index=False)
+
+    logger.info("Saved training data to %s", train_output)
+    logger.info("Saved production data to %s", prod_output)
 
 
 if __name__ == "__main__":
