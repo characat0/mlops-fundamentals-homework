@@ -87,6 +87,7 @@ def train(data_path: str, params: dict):
 
         with mlflow.start_run(run_name=model_name):
             mlflow.log_params(model_params)
+            mlflow.log_param("model_type", model_name)
             model.fit(X_to_use, y_encoded)
             accuracy = model.score(X_to_use, y_encoded)
             mlflow.log_metric("accuracy", accuracy)
