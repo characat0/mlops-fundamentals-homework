@@ -166,13 +166,13 @@ Every item below maps to a specific TODO in the code. Complete them in order —
 ### Stage 1 — Data Pipeline (`data_pipeline/`) · *6 pts* · [Rubric §1](GRADING_RUBRIC.md#1-data-pipeline-6-points)
 
 **`src/process.py` → `process_data()`**
-- [ ] Split `df` into `train_df` (year ≤ 2010) and `prod_df` (year > 2010)
-- [ ] Save both to CSV using `to_csv(..., index=False)`
+- [x] Split `df` into `train_df` (year ≤ 2010) and `prod_df` (year > 2010)
+- [x] Save both to CSV using `to_csv(..., index=False)`
 
 **`src/train.py` → `train()`**
-- [ ] Encode `genre` labels with `LabelEncoder`
-- [ ] Scale features with `StandardScaler` (LogisticRegression only — XGBoost skips this)
-- [ ] Loop through `params['train']`, for each model:
+- [x] Encode `genre` labels with `LabelEncoder`
+- [x] Scale features with `StandardScaler` (LogisticRegression only — XGBoost skips this)
+- [x] Loop through `params['train']`, for each model:
   - Start an MLflow run (`mlflow.start_run(run_name=...)`)
   - Log hyperparameters (`mlflow.log_params(...)`)
   - Fit the model
@@ -180,8 +180,8 @@ Every item below maps to a specific TODO in the code. Complete them in order —
   - Save the model artifact (`mlflow.sklearn.log_model` or `mlflow.xgboost.log_model`)
 
 **`src/evaluate.py` → `evaluate_and_register()`**
-- [ ] Call `client.create_model_version(name, source, run_id)` to register the best run
-- [ ] Call `client.set_registered_model_alias(name, "champion", version)` to tag it
+- [x] Call `client.create_model_version(name, source, run_id)` to register the best run
+- [x] Call `client.set_registered_model_alias(name, "champion", version)` to tag it
 
 ---
 
