@@ -4,6 +4,7 @@ import json
 import logging
 import os
 from pathlib import Path
+from datetime import datetime
 
 app = FastAPI(title="Spotify Genre Classifier API", version="1.0.0")
 
@@ -46,22 +47,26 @@ class PredictionResponse(BaseModel):
 async def log_requests(request: Request, call_next):
     """
     Log all incoming /predict requests to logs/api_requests.jsonl.
-
-    Logging here (middleware) rather than inside the endpoint keeps
-    observability separate from business logic — easier to disable, test,
-    and extend (rate limiting, metrics) without touching endpoint code.
-
-    TODO:
-      1. Only log POST requests to "/predict"
-      2. Read the body: body_bytes = await request.body()
-      3. Parse as JSON, add a "timestamp" field (datetime.utcnow().isoformat())
-      4. Append a JSON line to logs/api_requests.jsonl (create logs/ if needed)
-      5. Reconstruct the request so the endpoint can still read it:
-             async def receive():
-                 return {"type": "http.request", "body": body_bytes}
-             request = Request(request.scope, receive)
-      6. Call response = await call_next(request) and return it
     """
+    if request.method == "POST" and request.url.path == "/predict":
+        body_bytes = await request.body()
+        try:
+            payload = json.loads(body_bytes)
+            payload["timestamp"] = datetime.utcnow().isoformat()
+
+            log_dir = Path("logs")
+            log_dir.mkdir(exist_ok=True)
+            log_file = log_dir / "api_requests.jsonl"
+
+            with open(log_file, "a") as f:
+                f.write(json.dumps(payload) + "\n")
+        except Exception as e:
+            logger.error(f"Failed to log request: {str(e)}")
+
+        async def receive():
+            return {"type": "http.request", "body": body_bytes}
+        request = Request(request.scope, receive)
+
     response = await call_next(request)
     return response
 

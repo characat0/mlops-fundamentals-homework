@@ -194,9 +194,9 @@ Every item below maps to a specific TODO in the code. Complete them in order —
 - [x] Implement the health endpoint returning `{"status": "healthy"}`
 
 **`app/main.py` → `log_requests` middleware**
-- [ ] Read the request body and parse as JSON
-- [ ] Append a JSON line (with timestamp) to `logs/api_requests.jsonl`
-- [ ] Reconstruct the request before passing to `call_next`
+- [x] Read the request body and parse as JSON
+- [x] Append a JSON line (with timestamp) to `logs/api_requests.jsonl`
+- [x] Reconstruct the request before passing to `call_next`
 
 **`app/main.py` → `predict_genre()`**
 - [ ] Load the MLflow model from `./models/` (baked in at Docker build time)
