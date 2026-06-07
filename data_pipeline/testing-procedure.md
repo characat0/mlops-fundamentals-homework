@@ -75,8 +75,7 @@ Asegúrate de instalar `flake8` y configurar el path correctamente:
 uv add flake8
 
 # Ejecutar tests unitarios desde la RAÍZ
-$env:PYTHONPATH = "data_pipeline"
-uv run pytest data_pipeline/tests/ -v
+$env:PYTHONPATH = "data_pipeline"; uv run pytest data_pipeline/tests/ -v
 
 # Verificar estilo de código (enfocarse en src)
 uv run flake8 data_pipeline/src/

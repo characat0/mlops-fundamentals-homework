@@ -33,7 +33,7 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
         experiment = client.get_experiment_by_name("Default")
     except Exception:
         experiment = None
-    
+
     if experiment is None:
         experiment = client.get_experiment("0")
 
