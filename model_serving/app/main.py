@@ -23,7 +23,18 @@ logger = logging.getLogger(__name__)
 #   instrumentalness (float), liveness (float), valence (float),
 #   tempo (float), duration_ms (int)
 class SpotifyFeatures(BaseModel):
-    pass
+    danceability: float
+    energy: float
+    key: int
+    loudness: float
+    mode: int
+    speechiness: float
+    acousticness: float
+    instrumentalness: float
+    liveness: float
+    valence: float
+    tempo: float
+    duration_ms: int
 
 
 class PredictionResponse(BaseModel):
