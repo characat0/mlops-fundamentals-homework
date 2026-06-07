@@ -204,7 +204,7 @@ Every item below maps to a specific TODO in the code. Complete them in order —
 - [x] Run inference and return a `PredictionResponse` with genre and confidence
 
 **`Dockerfile`**
-- [ ] Add `ARG MLFLOW_TRACKING_URI` and the `RUN mlflow models download` step to pull `@champion` into `./models/`
+- [x] Add `ARG MLFLOW_TRACKING_URI` and the `RUN mlflow models download` step to pull `@champion` into `./models/`
 
 ---
 
