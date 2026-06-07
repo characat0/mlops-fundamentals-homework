@@ -199,9 +199,9 @@ Every item below maps to a specific TODO in the code. Complete them in order —
 - [x] Reconstruct the request before passing to `call_next`
 
 **`app/main.py` → `predict_genre()`**
-- [ ] Load the MLflow model from `./models/` (baked in at Docker build time)
-- [ ] Extract the feature values from the `SpotifyFeatures` object
-- [ ] Run inference and return a `PredictionResponse` with genre and confidence
+- [x] Load the MLflow model from `./models/` (baked in at Docker build time)
+- [x] Extract the feature values from the `SpotifyFeatures` object
+- [x] Run inference and return a `PredictionResponse` with genre and confidence
 
 **`Dockerfile`**
 - [ ] Add `ARG MLFLOW_TRACKING_URI` and the `RUN mlflow models download` step to pull `@champion` into `./models/`
