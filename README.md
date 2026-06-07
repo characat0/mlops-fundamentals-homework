@@ -166,8 +166,8 @@ Every item below maps to a specific TODO in the code. Complete them in order —
 ### Stage 1 — Data Pipeline (`data_pipeline/`) · *6 pts* · [Rubric §1](GRADING_RUBRIC.md#1-data-pipeline-6-points)
 
 **`src/process.py` → `process_data()`**
-- [ ] Split `df` into `train_df` (year ≤ 2010) and `prod_df` (year > 2010)
-- [ ] Save both to CSV using `to_csv(..., index=False)`
+- [x] Split `df` into `train_df` (year ≤ 2010) and `prod_df` (year > 2010)
+- [x] Save both to CSV using `to_csv(..., index=False)`
 
 **`src/train.py` → `train()`**
 - [ ] Encode `genre` labels with `LabelEncoder`
