@@ -69,6 +69,9 @@ async def log_requests(request: Request, call_next):
 # TODO: Implement the GET /health endpoint.
 #   It should return {"status": "healthy"} with a 200 status code.
 #   This is used by load balancers and CI checks to verify the API is up.
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
 
 
 @app.post("/predict", response_model=PredictionResponse)

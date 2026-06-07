@@ -188,10 +188,10 @@ Every item below maps to a specific TODO in the code. Complete them in order —
 ### Stage 2 — Model Serving (`model_serving/`) · *5 pts* · [Rubric §2](GRADING_RUBRIC.md#2-model-serving-5-points)
 
 **`app/main.py` → `SpotifyFeatures`**
-- [ ] Add the audio feature fields with correct types to the Pydantic model
+- [x] Add the audio feature fields with correct types to the Pydantic model
 
 **`app/main.py` → `GET /health`**
-- [ ] Implement the health endpoint returning `{"status": "healthy"}`
+- [x] Implement the health endpoint returning `{"status": "healthy"}`
 
 **`app/main.py` → `log_requests` middleware**
 - [ ] Read the request body and parse as JSON
