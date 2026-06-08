@@ -211,10 +211,10 @@ Every item below maps to a specific TODO in the code. Complete them in order —
 ### Stage 3 — Drift Monitoring (`drift_monitoring/`) · *3 pts* · [Rubric §3](GRADING_RUBRIC.md#3-drift-monitoring-3-points)
 
 **`src/analyze_drift.py` → `run_ks_analysis()`** *(shared by both modes)*
-- [ ] For each feature in `features_to_test`, run `scipy.stats.ks_2samp(train_values, prod_values)`
-- [ ] Flag drift if `p_value < 0.05`
-- [ ] Populate `drift_results["details"][feature]` with `ks_statistic`, `p_value`, `drift_detected`, `train_mean`, `prod_mean`
-- [ ] Append drifted feature names to `drift_results["drifted_features"]` and update `features_with_drift`
+- [x] For each feature in `features_to_test`, run `scipy.stats.ks_2samp(train_values, prod_values)`
+- [x] Flag drift if `p_value < 0.05`
+- [x] Populate `drift_results["details"][feature]` with `ks_statistic`, `p_value`, `drift_detected`, `train_mean`, `prod_mean`
+- [x] Append drifted feature names to `drift_results["drifted_features"]` and update `features_with_drift`
 
 **Batch mode** (`--mode batch`): called by `analyze_batch_drift()` — loads `data/train.csv` and `data/prod_sim.csv`
 
@@ -395,19 +395,19 @@ Located in `.github/workflows/ci.yml`.
 
 Review the full point breakdown in [GRADING_RUBRIC](GRADING_RUBRIC.md) before submitting.
 
-- [ ] All functions in `src/*.py` are implemented (no `pass` statements)
-- [ ] `params.yaml` has realistic hyperparameters
-- [ ] `dvc repro` runs without errors in `data_pipeline/` · [§1.5](GRADING_RUBRIC.md#15-dvc-pipeline-05-points)
-- [ ] `pytest` passes for both `data_pipeline/tests/` and `model_serving/tests/` · [§4.1](GRADING_RUBRIC.md#41-unit-tests-2-points)
-- [ ] `flake8 .` shows no major style violations · [§4.2](GRADING_RUBRIC.md#42-code-quality-1-point)
-- [ ] MLflow server has runs logged with metrics and models · [§1.3](GRADING_RUBRIC.md#13-train-script-2-points)
-- [ ] Best model is registered with `@champion` alias · [§1.4](GRADING_RUBRIC.md#14-evaluate-script-1-point)
-- [ ] API returns predictions with valid payloads · [§2.1](GRADING_RUBRIC.md#21-api-implementation-3-points)
-- [ ] API logs requests to `logs/api_requests.jsonl` · [§2.1](GRADING_RUBRIC.md#21-api-implementation-3-points)
-- [ ] Dockerfile builds successfully · [§2.3](GRADING_RUBRIC.md#23-dockerfile-1-point)
-- [ ] Drift monitoring script runs without errors · [§3](GRADING_RUBRIC.md#3-drift-monitoring-3-points)
+- [x] All functions in `src/*.py` are implemented (no `pass` statements)
+- [x] `params.yaml` has realistic hyperparameters
+- [x] `dvc repro` runs without errors in `data_pipeline/` · [§1.5](GRADING_RUBRIC.md#15-dvc-pipeline-05-points)
+- [x] `pytest` passes for both `data_pipeline/tests/` and `model_serving/tests/` · [§4.1](GRADING_RUBRIC.md#41-unit-tests-2-points)
+- [x] `flake8 .` shows no major style violations · [§4.2](GRADING_RUBRIC.md#42-code-quality-1-point)
+- [x] MLflow server has runs logged with metrics and models · [§1.3](GRADING_RUBRIC.md#13-train-script-2-points)
+- [x] Best model is registered with `@champion` alias · [§1.4](GRADING_RUBRIC.md#14-evaluate-script-1-point)
+- [x] API returns predictions with valid payloads · [§2.1](GRADING_RUBRIC.md#21-api-implementation-3-points)
+- [x] API logs requests to `logs/api_requests.jsonl` · [§2.1](GRADING_RUBRIC.md#21-api-implementation-3-points)
+- [x] Dockerfile builds successfully · [§2.3](GRADING_RUBRIC.md#23-dockerfile-1-point)
+- [x] Drift monitoring script runs without errors · [§3](GRADING_RUBRIC.md#3-drift-monitoring-3-points)
 - [ ] GitHub Actions workflow passes (green checkmark on PR) · [§4.3](GRADING_RUBRIC.md#43-github-actions-1-point)
-- [ ] All TODO comments in your code are addressed or justified · [§5.1](GRADING_RUBRIC.md#51-code-quality-1-point)
+- [x] All TODO comments in your code are addressed or justified · [§5.1](GRADING_RUBRIC.md#51-code-quality-1-point)
 - [ ] PR is open against the course repo `main` branch with title `[Homework] <Your Full Name>`
 
 ---

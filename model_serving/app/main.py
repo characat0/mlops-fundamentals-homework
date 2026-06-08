@@ -15,17 +15,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# TODO: Define the SpotifyFeatures Pydantic model.
+# Define the SpotifyFeatures Pydantic model.
 #
 # Include the audio feature fields from the Kaggle dataset, with the correct
 # Python types. The field names must match the column names exactly
 # (the tests send a payload with these exact keys).
-#
-# Example fields and types:
-#   danceability (float), energy (float), key (int), loudness (float),
-#   mode (int), speechiness (float), acousticness (float),
-#   instrumentalness (float), liveness (float), valence (float),
-#   tempo (float), duration_ms (int)
 class SpotifyFeatures(BaseModel):
     danceability: float
     energy: float
@@ -74,7 +68,7 @@ async def log_requests(request: Request, call_next):
     return response
 
 
-# TODO: Implement the GET /health endpoint.
+# Implement the GET /health endpoint.
 #   It should return {"status": "healthy"} with a 200 status code.
 #   This is used by load balancers and CI checks to verify the API is up.
 @app.get("/health")
