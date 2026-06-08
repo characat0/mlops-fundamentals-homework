@@ -211,10 +211,10 @@ Every item below maps to a specific TODO in the code. Complete them in order —
 ### Stage 3 — Drift Monitoring (`drift_monitoring/`) · *3 pts* · [Rubric §3](GRADING_RUBRIC.md#3-drift-monitoring-3-points)
 
 **`src/analyze_drift.py` → `run_ks_analysis()`** *(shared by both modes)*
-- [ ] For each feature in `features_to_test`, run `scipy.stats.ks_2samp(train_values, prod_values)`
-- [ ] Flag drift if `p_value < 0.05`
-- [ ] Populate `drift_results["details"][feature]` with `ks_statistic`, `p_value`, `drift_detected`, `train_mean`, `prod_mean`
-- [ ] Append drifted feature names to `drift_results["drifted_features"]` and update `features_with_drift`
+- [x] For each feature in `features_to_test`, run `scipy.stats.ks_2samp(train_values, prod_values)`
+- [x] Flag drift if `p_value < 0.05`
+- [x] Populate `drift_results["details"][feature]` with `ks_statistic`, `p_value`, `drift_detected`, `train_mean`, `prod_mean`
+- [x] Append drifted feature names to `drift_results["drifted_features"]` and update `features_with_drift`
 
 **Batch mode** (`--mode batch`): called by `analyze_batch_drift()` — loads `data/train.csv` and `data/prod_sim.csv`
 
