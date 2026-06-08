@@ -36,16 +36,28 @@ def process_data(
     logger.info(f"Raw dataset shape: {df.shape}")
     logger.info(f"Year range: {df['year'].min()}-{df['year'].max()}")
 
-    # TODO: Split df into two DataFrames using boolean indexing on the 'year' column:
-    #   train_df — rows where year <= year_threshold
-    #   prod_df  — rows where year >  year_threshold
-    #
-    # Log the size of each split so you can sanity-check the ratio.
+    # Temporal split (NOT random): the 2010 boundary marks the streaming-era shift.
+    #   train_df — pre-streaming era (year <= threshold)
+    #   prod_df  — streaming era     (year >  threshold)
+    train_df = df[df["year"] <= year_threshold]
+    prod_df = df[df["year"] > year_threshold]
 
-    # TODO: Save both splits to CSV (index=False).
-    #   Create parent directories first with os.makedirs(..., exist_ok=True).
-    #   train_df → train_output
-    #   prod_df  → prod_output
+    total = len(df)
+    logger.info(
+        f"Train split (year <= {year_threshold}): {len(train_df)} rows "
+        f"({len(train_df) / total:.1%})"
+    )
+    logger.info(
+        f"Prod split  (year >  {year_threshold}): {len(prod_df)} rows "
+        f"({len(prod_df) / total:.1%})"
+    )
+
+    # Persist both splits. Create parent directories first (the test passes
+    # output paths inside an existing tmpdir, but DVC writes into data/).
+    for output_path, split_df in ((train_output, train_df), (prod_output, prod_df)):
+        os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+        split_df.to_csv(output_path, index=False)
+        logger.info(f"Saved {len(split_df)} rows to {output_path}")
 
 
 if __name__ == "__main__":

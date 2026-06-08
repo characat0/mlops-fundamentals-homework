@@ -28,7 +28,12 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
     client = mlflow.tracking.MlflowClient()
 
-    experiment = client.get_experiment_by_name(None) or client.get_experiment("0")
+    # train.py logs into the "spotify-genre-classification" experiment;
+    # fall back to the Default experiment ("0") if it isn't found.
+    experiment = (
+        client.get_experiment_by_name("spotify-genre-classification")
+        or client.get_experiment("0")
+    )
     logger.info(f"Searching runs in experiment: {experiment.name}")
 
     runs = client.search_runs(
@@ -48,11 +53,30 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
     logger.info(f"Best run: {best_run.info.run_id} (accuracy={best_accuracy:.4f})")
 
-    # TODO: Register the model and assign the 'champion' alias
-    #   1. Call client.create_model_version() to register model_uri under model_name
-    #   2. Call client.set_registered_model_alias() to tag that version as "champion"
+    # Ensure the registered model exists (idempotent), then register this run's
+    # model as a new version and tag it as the champion.
+    try:
+        client.create_registered_model(model_name)
+        logger.info(f"Created registered model '{model_name}'")
+    except mlflow.exceptions.MlflowException:
+        logger.info(f"Registered model '{model_name}' already exists")
+
+    model_version = client.create_model_version(
+        name=model_name,
+        source=model_uri,
+        run_id=best_run.info.run_id,
+    )
+    client.set_registered_model_alias(
+        name=model_name,
+        alias="champion",
+        version=model_version.version,
+    )
+    logger.info(
+        f"Registered '{model_name}' v{model_version.version} with alias @champion"
+    )
 
     metrics = {
+        "champion_version": model_version.version,
         "best_run_id": best_run.info.run_id,
         "best_accuracy": best_accuracy,
         "model_type": best_run.data.params.get("model", "unknown"),
