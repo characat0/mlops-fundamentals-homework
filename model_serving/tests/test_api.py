@@ -25,7 +25,7 @@ def test_predict_endpoint_valid_payload():
         "liveness": 0.2,
         "valence": 0.6,
         "tempo": 120.0,
-        "duration_ms": 240000
+        "duration_ms": 240000,
     }
     response = client.post("/predict", json=payload)
     assert response.status_code == 200

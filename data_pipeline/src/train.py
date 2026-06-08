@@ -1,5 +1,7 @@
 import argparse
+import os
 import mlflow
+from sklearn.metrics import accuracy_score
 import yaml
 import pandas as pd
 import logging
@@ -10,6 +12,8 @@ import joblib
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+os.makedirs("models", exist_ok=True)
 
 
 def train(data_path: str, params: dict):
@@ -42,6 +46,12 @@ def train(data_path: str, params: dict):
            f. Log model artifact with appropriate MLflow function
            g. End the run
     """
+
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+    mlflow.set_tracking_uri(tracking_uri)
+    mlflow.set_experiment("spotify-genre-classification")
+    logger.info(f"Using MLflow tracking URI: {tracking_uri}")
+
     logger.info(f"Loading training data from {data_path}")
     df = pd.read_csv(data_path)
 
@@ -51,7 +61,22 @@ def train(data_path: str, params: dict):
     # You can use the lyrics column if you want, but it requires additional text processing and may not be
     # necessary for good performance.
     # Target is 'genre', features are audio features
-    X = df.drop(["genre", "year"], axis=1, errors='ignore')
+    feature_cols = [
+        "danceability",
+        "energy",
+        "key",
+        "loudness",
+        "mode",
+        "speechiness",
+        "acousticness",
+        "instrumentalness",
+        "liveness",
+        "valence",
+        "tempo",
+        "duration_ms",
+    ]
+
+    X = df[feature_cols]
     y = df["genre"]
 
     logger.info(f"Features shape: {X.shape}, Target shape: {y.shape}")
@@ -61,6 +86,8 @@ def train(data_path: str, params: dict):
     # The dataset has 10 distinct genre classes that need to be converted to integers (0-9).
     # This is required for sklearn models which expect numeric target values.
     # TODO: Encode genre labels (use LabelEncoder from sklearn)
+    label_encoder = LabelEncoder()
+    y_encoded = label_encoder.fit_transform(y)
 
     # SCALING:
     # Use StandardScaler for LogisticRegression to standardize features (zero mean, unit variance).
@@ -69,6 +96,11 @@ def train(data_path: str, params: dict):
     # - For LogisticRegression: scale the features before training
     # - For XGBoost: use original (unscaled) features
     # TODO: Scale features using StandardScaler
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    joblib.dump(label_encoder, "models/label_encoder.joblib")
+    joblib.dump(scaler, "models/scaler.joblib")
 
     # Get hyperparameters
     train_params = params.get("train", {})
@@ -119,6 +151,38 @@ def train(data_path: str, params: dict):
     #  6. Log metrics to MLflow
     #  7. Log model artifact with appropriate MLflow function
     #  8. End run
+    for model_name, model_params in train_params.items():
+        logger.info(f"Training model: {model_name}")
+
+        if model_name == "logistic_regression":
+            model = LogisticRegression(**model_params)
+            X_to_use = X_scaled
+            log_model = mlflow.sklearn.log_model
+
+        elif model_name == "xgboost":
+            model = xgb.XGBClassifier(**model_params)
+            X_to_use = X
+            log_model = mlflow.xgboost.log_model
+
+        else:
+            logger.warning(f"Skipping unsupported model type: {model_name}")
+            continue
+
+        with mlflow.start_run(run_name=model_name):
+            mlflow.log_param("model", model_name)
+            mlflow.log_params(model_params)
+
+            model.fit(X_to_use, y_encoded)
+
+            y_pred = model.predict(X_to_use)
+            accuracy = accuracy_score(y_encoded, y_pred)
+
+            mlflow.log_metric("accuracy", accuracy)
+            log_model(model, artifact_path="model")
+
+            joblib.dump(model, f"models/{model_name}.joblib")
+
+            logger.info(f"{model_name} accuracy: {accuracy:.4f}")
 
 
 if __name__ == "__main__":

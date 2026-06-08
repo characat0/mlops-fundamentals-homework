@@ -51,6 +51,7 @@ venv/
 ENV/
 env/
 .venv
+.env
 
 # IDE
 .vscode/
@@ -69,3 +70,17 @@ htmlcov/
 .tmp/
 tmp/
 *.log
+
+mlruns/
+model_serving/models/
+model_serving/logs/
+data_pipeline/songs.csv
+__pycache__/
+.pytest_cache/
+
+mlflow.db
+**/mlflow.db
+mlruns/
+**/mlruns/
+model_serving/logs/
+model_serving/models/
