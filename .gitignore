@@ -247,6 +247,7 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 .dvc/cache/*
-*.db
+
 drift_monitoring/batch_drift_report.json
 drift_monitoring/online_drift_report.json
+mlflow.db
