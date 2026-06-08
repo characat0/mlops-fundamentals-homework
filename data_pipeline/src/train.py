@@ -17,11 +17,6 @@ def train(data_path: str, params: dict):
     """
     Train multiple genre classification models and log them to MLflow.
 
-    **IMPORTANT: This is an intentionally incomplete skeleton for students to implement.**
-    Students are expected to complete the TODO sections below to build a complete
-    machine learning training pipeline with proper feature engineering, preprocessing,
-    model training, and MLflow logging.
-
     Args:
         data_path: Path to training CSV file (from data pipeline)
         params: Dictionary with hyperparameters from params.yaml
