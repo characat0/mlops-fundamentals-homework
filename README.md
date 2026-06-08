@@ -188,23 +188,23 @@ Every item below maps to a specific TODO in the code. Complete them in order —
 ### Stage 2 — Model Serving (`model_serving/`) · *5 pts* · [Rubric §2](GRADING_RUBRIC.md#2-model-serving-5-points)
 
 **`app/main.py` → `SpotifyFeatures`**
-- [ ] Add the audio feature fields with correct types to the Pydantic model
+- [x] Add the audio feature fields with correct types to the Pydantic model
 
 **`app/main.py` → `GET /health`**
-- [ ] Implement the health endpoint returning `{"status": "healthy"}`
+- [x] Implement the health endpoint returning `{"status": "healthy"}`
 
 **`app/main.py` → `log_requests` middleware**
-- [ ] Read the request body and parse as JSON
-- [ ] Append a JSON line (with timestamp) to `logs/api_requests.jsonl`
-- [ ] Reconstruct the request before passing to `call_next`
+- [x] Read the request body and parse as JSON
+- [x] Append a JSON line (with timestamp) to `logs/api_requests.jsonl`
+- [x] Reconstruct the request before passing to `call_next`
 
 **`app/main.py` → `predict_genre()`**
-- [ ] Load the MLflow model from `./models/` (baked in at Docker build time)
-- [ ] Extract the feature values from the `SpotifyFeatures` object
-- [ ] Run inference and return a `PredictionResponse` with genre and confidence
+- [x] Load the MLflow model from `./models/` (baked in at Docker build time)
+- [x] Extract the feature values from the `SpotifyFeatures` object
+- [x] Run inference and return a `PredictionResponse` with genre and confidence
 
 **`Dockerfile`**
-- [ ] Add `ARG MLFLOW_TRACKING_URI` and the `RUN mlflow models download` step to pull `@champion` into `./models/`
+- [x] Add `ARG MLFLOW_TRACKING_URI` and the `RUN mlflow models download` step to pull `@champion` into `./models/`
 
 ---
 
