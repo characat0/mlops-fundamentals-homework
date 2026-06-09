@@ -32,17 +32,11 @@ Invoke-RestMethod -Uri "http://localhost:8000/health" -Method Get
 ### Verify Prediction Endpoint
 Run the following payloads to verify real-time genre classification:
 ```powershell
-# Hip-Hop Test
+# Pop
 $payload = @{
     danceability = 0.7; energy = 0.8; key = 5; loudness = -5.0; mode = 1; speechiness = 0.05
-    acousticness = 0.1; instrumentalness = 0.0; liveness = 0.2; valence = 0.6; tempo = 120.0; duration_ms = 240000
-} | ConvertTo-Json
-Invoke-RestMethod -Uri "http://localhost:8000/predict" -Method Post -Body $payload -ContentType "application/json"
-
-# Rock Test
-$payload = @{
-    danceability = 0.55; energy = 0.95; key = 7; loudness = -3.0; mode = 1; speechiness = 0.04
-    acousticness = 0.02; instrumentalness = 0.01; liveness = 0.25; valence = 0.70; tempo = 150.0; duration_ms = 210000
+    acousticness = 0.1; instrumentalness = 0.0; liveness = 0.2; valence = 0.6; tempo = 120.0
+    duration_ms = 240000
 } | ConvertTo-Json
 Invoke-RestMethod -Uri "http://localhost:8000/predict" -Method Post -Body $payload -ContentType "application/json"
 ```
@@ -64,6 +58,25 @@ docker build --progress=plain -t spotify-api:latest -f model_serving/Dockerfile 
    ```powershell
    Invoke-RestMethod -Uri "http://localhost:8000/health" -Method Get
    ```
+
+
+Invoke-RestMethod -Uri "http://localhost:8000/predict" -Method Post -Body $payload -ContentType "application/json"
+
+```powershell
+# Hip-Hop Test
+$payload = @{
+    danceability = 0.7; energy = 0.8; key = 5; loudness = -5.0; mode = 1; speechiness = 0.05
+    acousticness = 0.1; instrumentalness = 0.0; liveness = 0.2; valence = 0.6; tempo = 120.0; duration_ms = 240000
+} | ConvertTo-Json
+Invoke-RestMethod -Uri "http://localhost:8000/predict" -Method Post -Body $payload -ContentType "application/json"
+
+# Rock Test
+$payload = @{
+    danceability = 0.55; energy = 0.95; key = 7; loudness = -3.0; mode = 1; speechiness = 0.04
+    acousticness = 0.02; instrumentalness = 0.01; liveness = 0.25; valence = 0.70; tempo = 150.0; duration_ms = 210000
+} | ConvertTo-Json
+Invoke-RestMethod -Uri "http://localhost:8000/predict" -Method Post -Body $payload -ContentType "application/json"
+```
 
 ## 4. Automated Testing
 Run the full test suite:
