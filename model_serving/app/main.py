@@ -151,12 +151,16 @@ def predict_genre(features: SpotifyFeatures) -> PredictionResponse:
 def _resolve_model_dir():
     """Find the directory that actually contains the MLmodel file.
 
-    `mlflow artifacts download -d ./models` nests the artifact under
-    ./models/model, so accept either layout.
+    `mlflow artifacts download -d ./models` can nest the artifact under
+    ./models/model (or another subfolder), so check the common layouts first
+    and then fall back to a recursive search for the MLmodel file.
     """
     for candidate in (MODEL_PATH, os.path.join(MODEL_PATH, "model")):
         if os.path.exists(os.path.join(candidate, "MLmodel")):
             return candidate
+    for root, _dirs, files in os.walk(MODEL_PATH):
+        if "MLmodel" in files:
+            return root
     return MODEL_PATH
 
 
