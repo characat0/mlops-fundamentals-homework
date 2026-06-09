@@ -111,47 +111,55 @@ def predict_genre(features: SpotifyFeatures) -> PredictionResponse:
         feature_dict = {name: [getattr(features, name)] for name in feature_names}
         X = pd.DataFrame(feature_dict)
 
+        # Apply scaling if available (Critical for many models)
+        scaler_path = os.path.join(model_path, "scaler.joblib")
+        if os.path.exists(scaler_path):
+            try:
+                scaler = joblib.load(scaler_path)
+                X_scaled = pd.DataFrame(scaler.transform(X), columns=feature_names)
+                X = X_scaled
+                logger.info("Features scaled successfully.")
+            except Exception as e:
+                logger.warning(f"Failed to apply scaling: {str(e)}")
+
         # Run inference
         prediction = model.predict(X)
+        logger.info(f"Raw model prediction: {prediction[0]}")
 
         # Get confidence if possible
-        confidence = 0.0
+        confidence = 1.0  # Default to 1.0 if we have a prediction but can't get probs
         try:
-            # Some models might support predict_proba
+            # Method 1: Check for predict_proba in the pyfunc wrapper
             if hasattr(model, "predict_proba"):
                 probs = model.predict_proba(X)
                 confidence = float(probs.max())
+            # Method 2: Check for predict_proba in the underlying model implementation
             elif hasattr(model, "_model_impl") and hasattr(model._model_impl, "predict_proba"):
-                # For pyfunc wrapped models
+                # For XGBoost/Sklearn models wrapped in pyfunc
                 probs = model._model_impl.predict_proba(X)
                 confidence = float(probs.max())
-        except Exception:
-            pass
+            # Method 3: For some XGBoost versions in pyfunc
+            elif hasattr(model, "unwrap_python_model"):
+                unwrapped = model.unwrap_python_model()
+                if hasattr(unwrapped, "predict_proba"):
+                    probs = unwrapped.predict_proba(X)
+                    confidence = float(probs.max())
+        except Exception as e:
+            logger.warning(f"Failed to extract confidence: {str(e)}")
 
         # Map prediction back to genre
-        # If prediction is numeric, we'd ideally use a LabelEncoder.
-        # Since we don't have it baked in here easily without assuming Stage 1 outputs,
-        # we'll check if the prediction is already a string (common in some MLflow setups)
-        # or handle the numeric mapping for the 10 main categories.
         predicted_genre = prediction[0]
 
-        # Standard genres from README
-        genres = [
-            'Rock', 'Pop', 'Electronic', 'Folk', 'Country',
-            'Hip-Hop', 'R&B', 'Jazz', 'Blues', 'Classical'
-        ]
-
-        if isinstance(predicted_genre, (int, float, os.sys.modules['numpy'].integer)):
-            # If numeric, we try to load the encoder if it was placed in the models dir
-            encoder_path = os.path.join(model_path, "label_encoder.joblib")
-            if os.path.exists(encoder_path):
+        # Try to use the LabelEncoder we rescued in the Dockerfile
+        encoder_path = os.path.join(model_path, "label_encoder.joblib")
+        if os.path.exists(encoder_path):
+            try:
                 le = joblib.load(encoder_path)
-                predicted_genre = le.inverse_transform([int(predicted_genre)])[0]
-            else:
-                # Fallback to index if encoder is missing (risky)
-                idx = int(predicted_genre)
-                if 0 <= idx < len(genres):
-                    predicted_genre = genres[idx]
+                # handle both numeric and string output from model
+                if isinstance(predicted_genre, (int, float, os.sys.modules['numpy'].integer)):
+                    predicted_genre = le.inverse_transform([int(predicted_genre)])[0]
+            except Exception as e:
+                logger.warning(f"Failed to use LabelEncoder: {str(e)}")
 
         return PredictionResponse(genre=str(predicted_genre), confidence=confidence)
 
