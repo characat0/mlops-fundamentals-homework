@@ -1,0 +1,7 @@
+{
+  "best_run_id": "152dae59b10f42dd9cab52618e9bda1d",
+  "best_accuracy": 0.5738159250956847,
+  "model_type": "xgboost",
+  "model_name": "spotify-genre-classifier",
+  "champion_alias": "champion"
+}
