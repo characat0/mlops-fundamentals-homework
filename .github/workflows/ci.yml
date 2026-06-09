@@ -27,6 +27,8 @@ jobs:
         run: flake8 .
         
       - name: Run Tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/data_pipeline:${{ github.workspace }}/model_serving
         run: |
           pytest data_pipeline/tests
           pytest model_serving/tests
