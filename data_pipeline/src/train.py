@@ -58,7 +58,8 @@ def train(data_path: str, params: dict):
     # FEATURE SELECTION:
     # Students should select features from the Kaggle dataset.
     # Drop all metadata and non-audio columns:
-    # You can use the lyrics column if you want, but it requires additional text processing and may not be
+    # You can use the lyrics column if you want, but it requires
+    # additional text processing and may not be
     # necessary for good performance.
     # Target is 'genre', features are audio features
     feature_cols = [

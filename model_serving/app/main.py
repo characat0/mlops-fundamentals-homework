@@ -149,7 +149,12 @@ def load_local_model():
     if MODEL is not None:
         return MODEL
 
-    model_path = Path("models")
+    model_path = Path(__file__).resolve().parents[1] / "models"
+
+    if not (model_path / "MLmodel").exists():
+        nested_model_path = model_path / "model"
+        if (nested_model_path / "MLmodel").exists():
+            model_path = nested_model_path
 
     try:
         MODEL = mlflow.sklearn.load_model(str(model_path))
