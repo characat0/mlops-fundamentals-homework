@@ -23,7 +23,7 @@ stages:
       - data/train.csv
       - src/train.py
     params:
-      - train:
+      - train
     outs:
       - models/:
           cache: false

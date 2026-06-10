@@ -8,12 +8,24 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 AUDIO_FEATURES = [
-    "danceability", "energy", "key", "loudness", "mode", "speechiness",
-    "acousticness", "instrumentalness", "liveness", "valence", "tempo", "duration_ms"
+    "danceability",
+    "energy",
+    "key",
+    "loudness",
+    "mode",
+    "speechiness",
+    "acousticness",
+    "instrumentalness",
+    "liveness",
+    "valence",
+    "tempo",
+    "duration_ms",
 ]
 
 
-def run_ks_analysis(train_df: pd.DataFrame, prod_df: pd.DataFrame, output_path: str) -> dict:
+def run_ks_analysis(
+    train_df: pd.DataFrame, prod_df: pd.DataFrame, output_path: str
+) -> dict:
     """
     Run a Kolmogorov-Smirnov test for each audio feature.
 
@@ -31,7 +43,9 @@ def run_ks_analysis(train_df: pd.DataFrame, prod_df: pd.DataFrame, output_path: 
     Returns:
         dict with per-feature KS results and an overall status
     """
-    logger.info(f"Training samples: {len(train_df)} | Production samples: {len(prod_df)}")
+    logger.info(
+        f"Training samples: {len(train_df)} | Production samples: {len(prod_df)}"
+    )
 
     drift_results = {
         "timestamp": pd.Timestamp.utcnow().isoformat(),
@@ -39,10 +53,12 @@ def run_ks_analysis(train_df: pd.DataFrame, prod_df: pd.DataFrame, output_path: 
         "production_samples": len(prod_df),
         "features_with_drift": 0,
         "drifted_features": [],
-        "details": {}
+        "details": {},
     }
 
-    features_to_test = [f for f in AUDIO_FEATURES if f in train_df.columns and f in prod_df.columns]
+    features_to_test = [
+        f for f in AUDIO_FEATURES if f in train_df.columns and f in prod_df.columns
+    ]
 
     # TODO: For each feature in features_to_test:
     #   1. Extract the feature column from train_df and prod_df (drop NaNs with .dropna())
@@ -53,13 +69,35 @@ def run_ks_analysis(train_df: pd.DataFrame, prod_df: pd.DataFrame, output_path: 
     #   5. Increment drift_results["features_with_drift"] and append feature name to
     #      drift_results["drifted_features"] if drift was detected
 
+    for feature in features_to_test:
+        train_values = train_df[feature].dropna()
+        prod_values = prod_df[feature].dropna()
+
+        ks_statistic, p_value = stats.ks_2samp(train_values, prod_values)
+        drift_detected = p_value < 0.05
+
+        drift_results["details"][feature] = {
+            "ks_statistic": float(ks_statistic),
+            "p_value": float(p_value),
+            "drift_detected": bool(drift_detected),
+            "train_mean": float(train_values.mean()),
+            "prod_mean": float(prod_values.mean()),
+        }
+
+        if drift_detected:
+            drift_results["features_with_drift"] += 1
+            drift_results["drifted_features"].append(feature)
+
     drifted = drift_results["features_with_drift"]
     total = len(features_to_test)
     drift_results["drift_percentage"] = (drifted / total * 100) if total > 0 else 0
-    drift_results["status"] = "DRIFT_DETECTED" if drift_results["drift_percentage"] > 20 else "NORMAL"
+    drift_results["status"] = (
+        "DRIFT_DETECTED" if drift_results["drift_percentage"] > 20 else "NORMAL"
+    )
 
-    logger.info(f"Status: {drift_results['status']} "
-                f"({drifted}/{total} features drifted)")
+    logger.info(
+        f"Status: {drift_results['status']} ({drifted}/{total} features drifted)"
+    )
 
     with open(output_path, "w") as f:
         json.dump(drift_results, f, indent=2)
@@ -114,7 +152,9 @@ def analyze_online_drift(train_path: str, api_logs_path: str, output_path: str) 
                     api_logs.append(json.loads(line))
         api_df = pd.DataFrame(api_logs)
     except FileNotFoundError:
-        logger.warning("API logs not found. Run the API and make some predictions first.")
+        logger.warning(
+            "API logs not found. Run the API and make some predictions first."
+        )
         return {"status": "no_api_logs", "message": "No API requests logged yet"}
 
     if api_df.empty:
@@ -124,7 +164,9 @@ def analyze_online_drift(train_path: str, api_logs_path: str, output_path: str) 
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Drift detection for Spotify genre classifier")
+    parser = argparse.ArgumentParser(
+        description="Drift detection for Spotify genre classifier"
+    )
     parser.add_argument(
         "--mode",
         choices=["batch", "online"],
@@ -132,20 +174,30 @@ if __name__ == "__main__":
         help=(
             "batch:  compare data/train.csv vs data/prod_sim.csv (temporal CSV splits)\n"
             "online: compare data/train.csv vs logs/api_requests.jsonl (live API traffic)"
-        )
+        ),
     )
-    parser.add_argument("--train_data", type=str, required=True,
-                        help="Path to training CSV (data/train.csv)")
-    parser.add_argument("--output", type=str, default="drift_report.json",
-                        help="Path to write the drift report JSON")
+    parser.add_argument(
+        "--train_data",
+        type=str,
+        required=True,
+        help="Path to training CSV (data/train.csv)",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="drift_report.json",
+        help="Path to write the drift report JSON",
+    )
 
     # batch-mode argument
-    parser.add_argument("--prod_data", type=str,
-                        help="[batch mode] Path to prod_sim.csv")
+    parser.add_argument(
+        "--prod_data", type=str, help="[batch mode] Path to prod_sim.csv"
+    )
 
     # online-mode argument
-    parser.add_argument("--api_logs", type=str,
-                        help="[online mode] Path to api_requests.jsonl")
+    parser.add_argument(
+        "--api_logs", type=str, help="[online mode] Path to api_requests.jsonl"
+    )
 
     args = parser.parse_args()
 

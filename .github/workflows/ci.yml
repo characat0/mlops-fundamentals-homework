@@ -8,25 +8,31 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
-          
+          python-version: "3.11"
+
       - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install flake8 pytest
           pip install -r data_pipeline/requirements.txt
           pip install -r model_serving/requirements.txt
           pip install -r drift_monitoring/requirements.txt
-          
+
       - name: Run Linter
         run: flake8 .
-        
-      - name: Run Tests
-        run: |
-          pytest data_pipeline/tests
-          pytest model_serving/tests
+
+      - name: Run data pipeline tests
+        run: pytest data_pipeline/tests -v
+
+      - name: Prepare test model for API tests
+        run: python model_serving/prepare_test_model.py
+
+      - name: Run model serving tests
+        run: pytest model_serving/tests -v

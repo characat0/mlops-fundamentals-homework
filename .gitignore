@@ -14,7 +14,6 @@ mlruns/
 *.joblib.z
 
 # API logs (production data)
-logs/
 api_requests.jsonl
 drift_report.json
 metrics.json
@@ -51,6 +50,7 @@ venv/
 ENV/
 env/
 .venv
+.env
 
 # IDE
 .vscode/
@@ -69,3 +69,14 @@ htmlcov/
 .tmp/
 tmp/
 *.log
+
+mlruns/
+model_serving/models/
+data_pipeline/songs.csv
+__pycache__/
+.pytest_cache/
+
+mlflow.db
+**/mlflow.db
+mlruns/
+**/mlruns/

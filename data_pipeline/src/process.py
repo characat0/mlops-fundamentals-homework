@@ -8,10 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 def process_data(
-    input_path: str,
-    train_output: str,
-    prod_output: str,
-    year_threshold: int = 2010
+    input_path: str, train_output: str, prod_output: str, year_threshold: int = 2010
 ):
     """
     Load and split the Spotify dataset temporally by release year.
@@ -38,14 +35,25 @@ def process_data(
 
     # TODO: Split df into two DataFrames using boolean indexing on the 'year' column:
     #   train_df — rows where year <= year_threshold
+    train_df = df[df["year"] <= year_threshold]
     #   prod_df  — rows where year >  year_threshold
+    prod_df = df[df["year"] > year_threshold]
     #
     # Log the size of each split so you can sanity-check the ratio.
+    logger.info(f"Training dataset shape: {train_df.shape}")
+    logger.info(f"Production dataset shape: {prod_df.shape}")
 
     # TODO: Save both splits to CSV (index=False).
     #   Create parent directories first with os.makedirs(..., exist_ok=True).
+    os.makedirs(os.path.dirname(train_output), exist_ok=True)
+    os.makedirs(os.path.dirname(prod_output), exist_ok=True)
     #   train_df → train_output
+    train_df.to_csv(train_output, index=False)
     #   prod_df  → prod_output
+    prod_df.to_csv(prod_output, index=False)
+
+    logger.info(f"Saved training dataset to {train_output}")
+    logger.info(f"Saved production dataset to {prod_output}")
 
 
 if __name__ == "__main__":
@@ -57,8 +65,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     process_data(
-        args.input_path,
-        args.train_output,
-        args.prod_output,
-        args.year_threshold
+        args.input_path, args.train_output, args.prod_output, args.year_threshold
     )

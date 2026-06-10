@@ -2,6 +2,15 @@
 max-line-length = 100
 extend-ignore = E203
 
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    data_pipeline/data,
+    model_serving/models,
+    model_serving/logs
+
 per-file-ignores =
-    # Scaffold imports provided for students to use in their TODO implementations
-    model_serving/app/main.py: F401
+    data_pipeline/tests/test_process.py:F401,E501
+    model_serving/tests/test_api.py:F401
