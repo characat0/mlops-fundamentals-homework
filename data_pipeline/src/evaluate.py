@@ -6,6 +6,8 @@ import os
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
+
 
 def evaluate_and_register(train_data_path: str = "data/train.csv"):
     """
@@ -28,7 +30,8 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
     client = mlflow.tracking.MlflowClient()
 
-    experiment = client.get_experiment_by_name(None) or client.get_experiment("0")
+    # experiment = client.get_experiment_by_name("Default") or client.get_experiment("0")
+    experiment = client.get_experiment_by_name("genre-classifier")
     logger.info(f"Searching runs in experiment: {experiment.name}")
 
     runs = client.search_runs(
@@ -44,13 +47,23 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
     best_run = runs[0]
     best_accuracy = best_run.data.metrics.get("accuracy", 0)
     model_uri = f"runs:/{best_run.info.run_id}/model"
-    model_name = "spotify-genre-classifier"
+    model_name = "genre-classifier"
 
     logger.info(f"Best run: {best_run.info.run_id} (accuracy={best_accuracy:.4f})")
 
     # TODO: Register the model and assign the 'champion' alias
     #   1. Call client.create_model_version() to register model_uri under model_name
+    try:
+        client.create_registered_model(model_name)
+        logger.info(f"Created registered model: {model_name}")
+    except mlflow.exceptions.MlflowException as e:
+        if "already exists" in str(e):
+            logger.info(f"Registered model '{model_name}' already exists, skipping creation.")
+        else:
+            raise
+    create_model = client.create_model_version(model_name, model_uri, best_run.info.run_id)
     #   2. Call client.set_registered_model_alias() to tag that version as "champion"
+    client.set_registered_model_alias(model_name, "champion", create_model.version)
 
     metrics = {
         "best_run_id": best_run.info.run_id,
