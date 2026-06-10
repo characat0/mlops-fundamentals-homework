@@ -6,8 +6,8 @@ import os
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-import os
 mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
+
 
 def evaluate_and_register(train_data_path: str = "data/train.csv"):
     """
@@ -16,14 +16,14 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
     The scaffolding below handles connecting to MLflow and finding the best run.
     Your job is to register that model in the MLflow Model Registry and assign
     the 'champion' alias so the Dockerfile can pull it by name.
- 
+
     MLflow Model Registry API:
         client.create_model_version(name, source, run_id)
             -> returns a ModelVersion object with a .version attribute
         client.set_registered_model_alias(name, alias, version)
             -> assigns a named alias to a specific version
     """
-    logger.info("Evaluating models and registering the best one...") 
+    logger.info("Evaluating models and registering the best one...")
 
     tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
     mlflow.set_tracking_uri(tracking_uri)

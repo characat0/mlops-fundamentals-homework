@@ -71,7 +71,7 @@ def run_ks_analysis(train_df: pd.DataFrame, prod_df: pd.DataFrame, output_path: 
         if drift_detected:
             drift_results["features_with_drift"] += 1
             drift_results["drifted_features"].append(feature)
-            
+
     drifted = drift_results["features_with_drift"]
     total = len(features_to_test)
     drift_results["drift_percentage"] = (drifted / total * 100) if total > 0 else 0
@@ -81,7 +81,8 @@ def run_ks_analysis(train_df: pd.DataFrame, prod_df: pd.DataFrame, output_path: 
                 f"({drifted}/{total} features drifted)")
 
     with open(output_path, "w") as f:
-        json.dump(drift_results, f, indent=2, default=lambda x: bool(x) if hasattr(x, 'item') else float(x))
+        json.dump(drift_results, f, indent=2, default=lambda x: bool(x)
+                  if hasattr(x, 'item') else float(x))
 
     logger.info(f"Drift report saved to {output_path}")
     return drift_results

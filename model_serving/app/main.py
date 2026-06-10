@@ -46,6 +46,8 @@ GENRE_LABELS = [
 #   mode (int), speechiness (float), acousticness (float),
 #   instrumentalness (float), liveness (float), valence (float),
 #   tempo (float), duration_ms (int)
+
+
 class SpotifyFeatures(BaseModel):
     danceability: float
     energy: float
@@ -67,6 +69,7 @@ class SpotifyFeatures(BaseModel):
 class PredictionResponse(BaseModel):
     genre: str
     confidence: float = 0.0
+
 
 def _is_valid_model_dir(path: Path) -> bool:
     """Verifica que el directorio contenga un modelo MLflow válido."""
@@ -149,17 +152,18 @@ def _load_model_auto_flavor(model_uri: str):
     else:
         raise RuntimeError(f"Flavor no soportado. Disponibles: {list(flavors.keys())}")
 
+
 def load_label_encoder():
     global _label_encoder
     if _label_encoder is not None:
         return _label_encoder
- 
+
     # Buscar label_encoder junto al modelo en models_cache
     for candidate in Path("./models_cache").rglob("label_encoder.pkl"):
         with open(candidate, "rb") as f:
             _label_encoder = pickle.load(f)
         return _label_encoder
- 
+
     # Fallback: ruta relativa al repo (desarrollo local)
     fallback = (
         Path(__file__).resolve().parents[2]
@@ -169,8 +173,9 @@ def load_label_encoder():
         with open(fallback, "rb") as f:
             _label_encoder = pickle.load(f)
         return _label_encoder
- 
+
     return None  # Usará GENRE_LABELS hardcodeado
+
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -194,7 +199,6 @@ async def log_requests(request: Request, call_next):
     """
     if request.method == "POST" and request.url.path == "/predict":
         body_bytes = await request.body()
-
 
         payload = json.loads(body_bytes)
 
