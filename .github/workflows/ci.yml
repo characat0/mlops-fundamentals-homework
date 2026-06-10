@@ -16,8 +16,10 @@ jobs:
         with:
           python-version: '3.14'
 
-      - name: Install uv
-        run: pip install uv==0.11.2
+      - name: Install uv and linter
+        run: |
+          pip install uv==0.11.2
+          pip install flake8==7.3.0
 
       - name: Install data_pipeline deps
         working-directory: data_pipeline
