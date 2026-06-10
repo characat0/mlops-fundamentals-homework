@@ -27,8 +27,8 @@ stages:
       size: 857013234
     - path: src/process.py
       hash: md5
-      md5: 0041508519a49652826a698b08f87fe8
-      size: 2328
+      md5: 31b7ba011856fe9a89194fb0eb04ca38
+      size: 2326
     outs:
     - path: data/prod_sim.csv
       hash: md5
@@ -66,3 +66,20 @@ stages:
       md5: ce3fa61c6501b258d2736dc4a869b7ab.dir
       size: 1969
       nfiles: 3
+  evaluate:
+    cmd: python src/evaluate.py --train_data data/train.csv
+    deps:
+    - path: models/
+      hash: md5
+      md5: ce3fa61c6501b258d2736dc4a869b7ab.dir
+      size: 1969
+      nfiles: 3
+    - path: src/evaluate.py
+      hash: md5
+      md5: ec088d1ad7b0b7c1b8f027c4fab3f77f
+      size: 3305
+    outs:
+    - path: metrics.json
+      hash: md5
+      md5: d9723bbcb07cb79f1c458913a9848407
+      size: 228
