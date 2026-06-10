@@ -406,9 +406,9 @@ Review the full point breakdown in [GRADING_RUBRIC](GRADING_RUBRIC.md) before su
 - [x] API logs requests to `logs/api_requests.jsonl` · [§2.1](GRADING_RUBRIC.md#21-api-implementation-3-points)
 - [x] Dockerfile builds successfully · [§2.3](GRADING_RUBRIC.md#23-dockerfile-1-point)
 - [x] Drift monitoring script runs without errors · [§3](GRADING_RUBRIC.md#3-drift-monitoring-3-points)
-- [ ] GitHub Actions workflow passes (green checkmark on PR) · [§4.3](GRADING_RUBRIC.md#43-github-actions-1-point)
+- [x] GitHub Actions workflow passes (green checkmark on PR) · [§4.3](GRADING_RUBRIC.md#43-github-actions-1-point)
 - [x] All TODO comments in your code are addressed or justified · [§5.1](GRADING_RUBRIC.md#51-code-quality-1-point)
-- [ ] PR is open against the course repo `main` branch with title `[Homework] <Your Full Name>`
+- [x] PR is open against the course repo `main` branch with title `[Homework] <Your Full Name>`
 
 ---
 
