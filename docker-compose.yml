@@ -1,0 +1,100 @@
+# docker-compose.yml — MLflow Tracking Server + Spotify Genre Classifier API
+#
+name: mlops-spotify
+# This compose file provides a centralized MLflow server that acts as
+# the model registry for the entire project:
+#
+#   data_pipeline/  →  logs experiments & registers @champion  →  MLflow
+#   model_serving/  ←  downloads @champion at build-time       ←  MLflow
+#
+# ─── Workflow ────────────────────────────────────────────────────────
+#
+#   1. Start the MLflow server:
+#        docker compose up mlflow -d
+#
+#   2. Run the data pipeline locally (trains models, registers @champion):
+#        cd data_pipeline
+#        export MLFLOW_TRACKING_URI=http://localhost:5000
+#        uv run dvc repro
+#
+#   3. Verify in MLflow UI: http://localhost:5000
+#      → Experiments → spotify-genre-classifier → 2 runs
+#      → Models → spotify-genre-classifier → Aliases → @champion
+#
+#   4. Build and start the API (downloads @champion from MLflow):
+#        docker compose up api --build
+#
+#   5. Test:
+#        curl http://localhost:8000/health
+#        curl -X POST http://localhost:8000/predict \
+#          -H "Content-Type: application/json" \
+#          -d '{"danceability":0.7,"energy":0.8,"key":5,"loudness":-5.0,
+#               "mode":1,"speechiness":0.05,"acousticness":0.1,
+#               "instrumentalness":0.0,"liveness":0.2,"valence":0.6,
+#               "tempo":120.0,"duration_ms":240000}'
+#
+# ─── Notes ───────────────────────────────────────────────────────────
+#
+# - MLflow stores artifacts and metadata in a named volume (mlflow-data).
+#   This persists across restarts. To reset: docker compose down -v
+# - The API build requires MLflow to be running (downloads the model).
+# - The data pipeline runs on your host machine (not containerized)
+#   because it needs access to the dataset (~856 MB) and DVC cache.
+# ---------------------------------------------------------------------------
+
+services:
+  mlflow:
+    image: ghcr.io/astral-sh/uv:0.11.2-python3.14-trixie-slim
+    container_name: mlflow-server
+    command:
+      - bash
+      - -c
+      - |
+        uv pip install --system mlflow==3.13.0 &&
+        mkdir -p /mlflow-data/artifacts &&
+        mlflow server \
+          --host 0.0.0.0 \
+          --port 5000 \
+          --backend-store-uri sqlite:////mlflow-data/mlflow.db \
+          --default-artifact-root /mlflow-data/artifacts \
+          --no-serve-artifacts \
+          --allowed-hosts "*"
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-data:/mlflow-data
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+      start_period: 30s
+
+  api:
+    build:
+      context: ./model_serving
+      dockerfile: Dockerfile
+      args:
+        MLFLOW_TRACKING_URI: http://host.docker.internal:5000
+        DOWNLOAD_MODEL: "true"
+    container_name: spotify-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    volumes:
+      - api-logs:/app/logs
+
+volumes:
+  mlflow-data:
+    name: mlops-spotify-mlflow-data
+    driver: local
+  api-logs:
+    name: mlops-spotify-api-logs
+    driver: local
+
+networks:
+  default:
+    name: mlops-spotify-network

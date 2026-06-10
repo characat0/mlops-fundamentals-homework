@@ -4,7 +4,11 @@ songs.csv
 data/raw.csv
 data/train.csv
 data/prod_sim.csv
-data/
+data/songs.csv
+data/artists.csv
+
+# Personal working notes (kept locally only)
+ANALYSIS.md
 
 # Models and artifacts
 models/
@@ -12,6 +16,17 @@ mlruns/
 *.pkl
 *.joblib
 *.joblib.z
+# The local champion (offline fallback) is versioned with the code.
+# Everything inside models/local/ is tracked; models/remote/ is ephemeral.
+!model_serving/models/local/
+!model_serving/models/local/**
+
+# MLflow local tracking backend
+mlflow.db
+mlflow.db-*
+
+# DVC local remote storage
+dvc-storage/
 
 # API logs (production data)
 logs/
@@ -23,6 +38,11 @@ metrics.json
 .env
 .env.local
 .env.*.local
+
+# Kaggle credentials
+.kaggle/
+kaggle.json
+access_token
 
 # Python
 __pycache__/

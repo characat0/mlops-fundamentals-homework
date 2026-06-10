@@ -1,0 +1,7 @@
+# Ignore CSV files
+# Ignore data outputs (raw splits) but keep DVC pointers
+/data/songs.csv
+/data/artists.csv
+/data/raw.csv
+/data/train.csv
+/data/prod_sim.csv

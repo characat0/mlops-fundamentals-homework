@@ -10,23 +10,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
-          
-      - name: Install dependencies
+          python-version: '3.14'
+
+      - name: Install uv and linter
         run: |
-          pip install flake8 pytest
-          pip install -r data_pipeline/requirements.txt
-          pip install -r model_serving/requirements.txt
-          pip install -r drift_monitoring/requirements.txt
-          
+          pip install uv==0.11.2
+          pip install flake8==7.3.0
+
+      - name: Install data_pipeline deps
+        working-directory: data_pipeline
+        run: uv sync --group dev
+
+      - name: Install model_serving deps
+        working-directory: model_serving
+        run: uv sync --group dev
+
+      - name: Install drift_monitoring deps
+        working-directory: drift_monitoring
+        run: uv sync
+
       - name: Run Linter
-        run: flake8 .
-        
-      - name: Run Tests
         run: |
-          pytest data_pipeline/tests
-          pytest model_serving/tests
+          flake8 . \
+            --exclude=.venv,mlruns,dvc-storage,__pycache__,.pytest_cache,data,logs,models,models_local,.dvc
+
+      - name: Run Tests (data_pipeline)
+        working-directory: data_pipeline
+        run: uv run pytest tests/
+
+      - name: Run Tests (model_serving)
+        working-directory: model_serving
+        run: uv run pytest tests/
