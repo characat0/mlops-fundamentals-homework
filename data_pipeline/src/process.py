@@ -37,15 +37,23 @@ def process_data(
     logger.info(f"Year range: {df['year'].min()}-{df['year'].max()}")
 
     # TODO: Split df into two DataFrames using boolean indexing on the 'year' column:
+    train_df = df.loc[df["year"]<=year_threshold]
+    prod_df = df.loc[df["year"]>year_threshold]
     #   train_df — rows where year <= year_threshold
     #   prod_df  — rows where year >  year_threshold
-    #
+    #   
     # Log the size of each split so you can sanity-check the ratio.
+    logger.info(f"Train dataset lenght: {len(train_df)}")
+    logger.info(f"Train dataset lenght: {len(prod_df)}")
 
     # TODO: Save both splits to CSV (index=False).
     #   Create parent directories first with os.makedirs(..., exist_ok=True).
+    os.makedirs(os.path.dirname(train_output), exist_ok=True)
+    os.makedirs(os.path.dirname(prod_output), exist_ok=True)
     #   train_df → train_output
     #   prod_df  → prod_output
+    train_df.to_csv(train_output, index=False)
+    prod_df.to_csv(prod_output, index=False)
 
 
 if __name__ == "__main__":

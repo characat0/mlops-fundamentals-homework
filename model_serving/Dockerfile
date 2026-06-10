@@ -13,11 +13,18 @@ RUN pip install -r requirements.txt
 #
 # Hint:
 #   ARG MLFLOW_TRACKING_URI=http://localhost:5000
-#   RUN mlflow models download -m "models:/spotify-genre-classifier@champion" \
+#   RUN mlflow models download -m "models:/genre-classifier@champion" \
 #       -d ./models --no-directory
 #
 # After this step, load the model in predict_genre() using:
 #   mlflow.sklearn.load_model("./models")
+
+ARG MLFLOW_TRACKING_URI=http://localhost:5000
+ENV MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
+
+RUN mlflow artifacts download \
+    --artifact-uri "models:/genre-classifier@champion" \
+    --dst-path ./models_cache
 
 COPY ./app ./app
 RUN touch /app/app/__init__.py
