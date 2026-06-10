@@ -28,7 +28,15 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
     client = mlflow.tracking.MlflowClient()
 
-    experiment = client.get_experiment_by_name(None) or client.get_experiment("0")
+    # Try to find the 'Default' experiment or experiment ID '0'
+    try:
+        experiment = client.get_experiment_by_name("Default")
+    except Exception:
+        experiment = None
+
+    if experiment is None:
+        experiment = client.get_experiment("0")
+
     logger.info(f"Searching runs in experiment: {experiment.name}")
 
     runs = client.search_runs(
@@ -48,14 +56,29 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
     logger.info(f"Best run: {best_run.info.run_id} (accuracy={best_accuracy:.4f})")
 
-    # TODO: Register the model and assign the 'champion' alias
-    #   1. Call client.create_model_version() to register model_uri under model_name
-    #   2. Call client.set_registered_model_alias() to tag that version as "champion"
+    # Register the model and assign the 'champion' alias
+    try:
+        client.get_registered_model(model_name)
+    except Exception:
+        logger.info(f"Creating registered model: {model_name}")
+        client.create_registered_model(model_name)
+
+    # 1. Call client.create_model_version() to register model_uri under model_name
+    mv = client.create_model_version(
+        name=model_name,
+        source=model_uri,
+        run_id=best_run.info.run_id
+    )
+
+    # 2. Call client.set_registered_model_alias() to tag that version as "champion"
+    client.set_registered_model_alias(model_name, "champion", mv.version)
+
+    logger.info(f"Registered model version {mv.version} as '@champion'")
 
     metrics = {
         "best_run_id": best_run.info.run_id,
         "best_accuracy": best_accuracy,
-        "model_type": best_run.data.params.get("model", "unknown"),
+        "model_type": best_run.data.params.get("model_type", "unknown"),
         "model_name": model_name,
         "champion_alias": "champion"
     }

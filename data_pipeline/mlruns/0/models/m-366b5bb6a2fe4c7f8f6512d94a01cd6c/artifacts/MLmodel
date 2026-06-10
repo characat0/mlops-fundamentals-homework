@@ -1,0 +1,22 @@
+artifact_path: file:C:/Dev_Projects/TAREAS/5.MLOPs/mlops-fundamentals-homework/data_pipeline/mlruns/0/models/m-366b5bb6a2fe4c7f8f6512d94a01cd6c/artifacts
+flavors:
+  python_function:
+    data: model.ubj
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.xgboost
+    python_version: 3.12.12
+  xgboost:
+    code: null
+    data: model.ubj
+    model_class: xgboost.sklearn.XGBClassifier
+    model_format: ubj
+    xgb_version: 3.2.0
+mlflow_version: 3.13.0
+model_id: m-366b5bb6a2fe4c7f8f6512d94a01cd6c
+model_size_bytes: 4690321
+model_uuid: m-366b5bb6a2fe4c7f8f6512d94a01cd6c
+prompts: null
+run_id: f30bf27cd3934c0398f8b58b9f4f35c5
+utc_time_created: '2026-06-09 04:07:24.174450'

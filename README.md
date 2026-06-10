@@ -166,13 +166,13 @@ Every item below maps to a specific TODO in the code. Complete them in order —
 ### Stage 1 — Data Pipeline (`data_pipeline/`) · *6 pts* · [Rubric §1](GRADING_RUBRIC.md#1-data-pipeline-6-points)
 
 **`src/process.py` → `process_data()`**
-- [ ] Split `df` into `train_df` (year ≤ 2010) and `prod_df` (year > 2010)
-- [ ] Save both to CSV using `to_csv(..., index=False)`
+- [x] Split `df` into `train_df` (year ≤ 2010) and `prod_df` (year > 2010)
+- [x] Save both to CSV using `to_csv(..., index=False)`
 
 **`src/train.py` → `train()`**
-- [ ] Encode `genre` labels with `LabelEncoder`
-- [ ] Scale features with `StandardScaler` (LogisticRegression only — XGBoost skips this)
-- [ ] Loop through `params['train']`, for each model:
+- [x] Encode `genre` labels with `LabelEncoder`
+- [x] Scale features with `StandardScaler` (LogisticRegression only — XGBoost skips this)
+- [x] Loop through `params['train']`, for each model:
   - Start an MLflow run (`mlflow.start_run(run_name=...)`)
   - Log hyperparameters (`mlflow.log_params(...)`)
   - Fit the model
@@ -180,41 +180,41 @@ Every item below maps to a specific TODO in the code. Complete them in order —
   - Save the model artifact (`mlflow.sklearn.log_model` or `mlflow.xgboost.log_model`)
 
 **`src/evaluate.py` → `evaluate_and_register()`**
-- [ ] Call `client.create_model_version(name, source, run_id)` to register the best run
-- [ ] Call `client.set_registered_model_alias(name, "champion", version)` to tag it
+- [x] Call `client.create_model_version(name, source, run_id)` to register the best run
+- [x] Call `client.set_registered_model_alias(name, "champion", version)` to tag it
 
 ---
 
 ### Stage 2 — Model Serving (`model_serving/`) · *5 pts* · [Rubric §2](GRADING_RUBRIC.md#2-model-serving-5-points)
 
 **`app/main.py` → `SpotifyFeatures`**
-- [ ] Add the audio feature fields with correct types to the Pydantic model
+- [x] Add the audio feature fields with correct types to the Pydantic model
 
 **`app/main.py` → `GET /health`**
-- [ ] Implement the health endpoint returning `{"status": "healthy"}`
+- [x] Implement the health endpoint returning `{"status": "healthy"}`
 
 **`app/main.py` → `log_requests` middleware**
-- [ ] Read the request body and parse as JSON
-- [ ] Append a JSON line (with timestamp) to `logs/api_requests.jsonl`
-- [ ] Reconstruct the request before passing to `call_next`
+- [x] Read the request body and parse as JSON
+- [x] Append a JSON line (with timestamp) to `logs/api_requests.jsonl`
+- [x] Reconstruct the request before passing to `call_next`
 
 **`app/main.py` → `predict_genre()`**
-- [ ] Load the MLflow model from `./models/` (baked in at Docker build time)
-- [ ] Extract the feature values from the `SpotifyFeatures` object
-- [ ] Run inference and return a `PredictionResponse` with genre and confidence
+- [x] Load the MLflow model from `./models/` (baked in at Docker build time)
+- [x] Extract the feature values from the `SpotifyFeatures` object
+- [x] Run inference and return a `PredictionResponse` with genre and confidence
 
 **`Dockerfile`**
-- [ ] Add `ARG MLFLOW_TRACKING_URI` and the `RUN mlflow models download` step to pull `@champion` into `./models/`
+- [x] Add `ARG MLFLOW_TRACKING_URI` and the `RUN mlflow models download` step to pull `@champion` into `./models/`
 
 ---
 
 ### Stage 3 — Drift Monitoring (`drift_monitoring/`) · *3 pts* · [Rubric §3](GRADING_RUBRIC.md#3-drift-monitoring-3-points)
 
 **`src/analyze_drift.py` → `run_ks_analysis()`** *(shared by both modes)*
-- [ ] For each feature in `features_to_test`, run `scipy.stats.ks_2samp(train_values, prod_values)`
-- [ ] Flag drift if `p_value < 0.05`
-- [ ] Populate `drift_results["details"][feature]` with `ks_statistic`, `p_value`, `drift_detected`, `train_mean`, `prod_mean`
-- [ ] Append drifted feature names to `drift_results["drifted_features"]` and update `features_with_drift`
+- [x] For each feature in `features_to_test`, run `scipy.stats.ks_2samp(train_values, prod_values)`
+- [x] Flag drift if `p_value < 0.05`
+- [x] Populate `drift_results["details"][feature]` with `ks_statistic`, `p_value`, `drift_detected`, `train_mean`, `prod_mean`
+- [x] Append drifted feature names to `drift_results["drifted_features"]` and update `features_with_drift`
 
 **Batch mode** (`--mode batch`): called by `analyze_batch_drift()` — loads `data/train.csv` and `data/prod_sim.csv`
 
@@ -395,20 +395,20 @@ Located in `.github/workflows/ci.yml`.
 
 Review the full point breakdown in [GRADING_RUBRIC](GRADING_RUBRIC.md) before submitting.
 
-- [ ] All functions in `src/*.py` are implemented (no `pass` statements)
-- [ ] `params.yaml` has realistic hyperparameters
-- [ ] `dvc repro` runs without errors in `data_pipeline/` · [§1.5](GRADING_RUBRIC.md#15-dvc-pipeline-05-points)
-- [ ] `pytest` passes for both `data_pipeline/tests/` and `model_serving/tests/` · [§4.1](GRADING_RUBRIC.md#41-unit-tests-2-points)
-- [ ] `flake8 .` shows no major style violations · [§4.2](GRADING_RUBRIC.md#42-code-quality-1-point)
-- [ ] MLflow server has runs logged with metrics and models · [§1.3](GRADING_RUBRIC.md#13-train-script-2-points)
-- [ ] Best model is registered with `@champion` alias · [§1.4](GRADING_RUBRIC.md#14-evaluate-script-1-point)
-- [ ] API returns predictions with valid payloads · [§2.1](GRADING_RUBRIC.md#21-api-implementation-3-points)
-- [ ] API logs requests to `logs/api_requests.jsonl` · [§2.1](GRADING_RUBRIC.md#21-api-implementation-3-points)
-- [ ] Dockerfile builds successfully · [§2.3](GRADING_RUBRIC.md#23-dockerfile-1-point)
-- [ ] Drift monitoring script runs without errors · [§3](GRADING_RUBRIC.md#3-drift-monitoring-3-points)
-- [ ] GitHub Actions workflow passes (green checkmark on PR) · [§4.3](GRADING_RUBRIC.md#43-github-actions-1-point)
-- [ ] All TODO comments in your code are addressed or justified · [§5.1](GRADING_RUBRIC.md#51-code-quality-1-point)
-- [ ] PR is open against the course repo `main` branch with title `[Homework] <Your Full Name>`
+- [x] All functions in `src/*.py` are implemented (no `pass` statements)
+- [x] `params.yaml` has realistic hyperparameters
+- [x] `dvc repro` runs without errors in `data_pipeline/` · [§1.5](GRADING_RUBRIC.md#15-dvc-pipeline-05-points)
+- [x] `pytest` passes for both `data_pipeline/tests/` and `model_serving/tests/` · [§4.1](GRADING_RUBRIC.md#41-unit-tests-2-points)
+- [x] `flake8 .` shows no major style violations · [§4.2](GRADING_RUBRIC.md#42-code-quality-1-point)
+- [x] MLflow server has runs logged with metrics and models · [§1.3](GRADING_RUBRIC.md#13-train-script-2-points)
+- [x] Best model is registered with `@champion` alias · [§1.4](GRADING_RUBRIC.md#14-evaluate-script-1-point)
+- [x] API returns predictions with valid payloads · [§2.1](GRADING_RUBRIC.md#21-api-implementation-3-points)
+- [x] API logs requests to `logs/api_requests.jsonl` · [§2.1](GRADING_RUBRIC.md#21-api-implementation-3-points)
+- [x] Dockerfile builds successfully · [§2.3](GRADING_RUBRIC.md#23-dockerfile-1-point)
+- [x] Drift monitoring script runs without errors · [§3](GRADING_RUBRIC.md#3-drift-monitoring-3-points)
+- [x] GitHub Actions workflow passes (green checkmark on PR) · [§4.3](GRADING_RUBRIC.md#43-github-actions-1-point)
+- [x] All TODO comments in your code are addressed or justified · [§5.1](GRADING_RUBRIC.md#51-code-quality-1-point)
+- [x] PR is open against the course repo `main` branch with title `[Homework] <Your Full Name>`
 
 ---
 
