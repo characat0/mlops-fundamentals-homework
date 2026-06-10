@@ -1,9 +1,6 @@
-import pytest  # noqa: F401  (re-exported for test discovery)
-
 import os
 import pandas as pd
 import tempfile
-
 from src.process import process_data
 
 
