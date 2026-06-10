@@ -76,7 +76,11 @@ def run_ks_analysis(train_df: pd.DataFrame, prod_df: pd.DataFrame, output_path: 
     drifted = drift_results["features_with_drift"]
     total = len(features_to_test)
     drift_results["drift_percentage"] = (drifted / total * 100) if total > 0 else 0
-    drift_results["status"] = "DRIFT_DETECTED" if drift_results["drift_percentage"] > 20 else "NORMAL"
+    drift_results["status"] = (
+        "DRIFT_DETECTED"
+        if drift_results["drift_percentage"] > 20
+        else "NORMAL"
+    )
 
     logger.info(f"Status: {drift_results['status']} "
                 f"({drifted}/{total} features drifted)")
@@ -134,8 +138,14 @@ def analyze_online_drift(train_path: str, api_logs_path: str, output_path: str) 
                     api_logs.append(json.loads(line))
         api_df = pd.DataFrame(api_logs)
     except FileNotFoundError:
-        logger.warning("API logs not found. Run the API and make some predictions first.")
-        return {"status": "no_api_logs", "message": "No API requests logged yet"}
+        logger.warning(
+            "API logs not found. "
+            "Run the API and make some predictions first."
+        )
+        return {
+            "status": "no_api_logs",
+            "message": "No API requests logged yet"
+        }
 
     if api_df.empty:
         return {"status": "no_api_logs", "message": "API logs are empty"}
@@ -144,7 +154,9 @@ def analyze_online_drift(train_path: str, api_logs_path: str, output_path: str) 
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Drift detection for Spotify genre classifier")
+    parser = argparse.ArgumentParser(
+        description="Drift detection for Spotify genre classifier"
+    )
     parser.add_argument(
         "--mode",
         choices=["batch", "online"],

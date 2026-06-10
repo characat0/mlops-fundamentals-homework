@@ -9,7 +9,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import xgboost as xgb
-#import joblib
 import os
 
 logging.basicConfig(level=logging.INFO)

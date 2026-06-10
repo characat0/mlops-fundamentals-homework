@@ -69,4 +69,3 @@ if __name__ == "__main__":
         args.prod_output,
         args.year_threshold
     )
-    

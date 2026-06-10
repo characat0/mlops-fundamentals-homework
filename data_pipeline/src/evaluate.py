@@ -28,11 +28,11 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
     client = mlflow.tracking.MlflowClient()
 
-    #experiment = client.get_experiment_by_name(None) or client.get_experiment("0")
-    
     experiment = (
-    client.get_experiment_by_name("spotify-genre-classification")
-    or client.get_experiment("0")
+        client.get_experiment_by_name(
+            "spotify-genre-classification"
+        )
+        or client.get_experiment("0")
     )
 
     logger.info(f"Searching runs in experiment: {experiment.name}")
