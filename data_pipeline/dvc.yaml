@@ -22,17 +22,16 @@ stages:
     deps:
       - data/train.csv
       - src/train.py
+      - params.yaml
     params:
-      - train:
-    outs:
-      - models/:
-          cache: false
+      - train
+
 
   evaluate:
     cmd: python src/evaluate.py --train_data data/train.csv
     deps:
       - src/evaluate.py
-      - models/
+      - data/train.csv
     metrics:
       - metrics.json:
           cache: false
