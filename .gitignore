@@ -13,6 +13,10 @@ mlruns/
 *.joblib
 *.joblib.z
 
+# MLflow local databases
+mlflow.db
+model_serving/mlflow.db
+
 # API logs (production data)
 logs/
 api_requests.jsonl
