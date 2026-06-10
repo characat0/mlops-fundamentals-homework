@@ -2,35 +2,25 @@ import mlflow
 import json
 import logging
 import os
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 def evaluate_and_register(train_data_path: str = "data/train.csv"):
-    """
-    Find the best performing model and register it with @champion alias.
-
-    The scaffolding below handles connecting to MLflow and finding the best run.
-    Your job is to register that model in the MLflow Model Registry and assign
-    the 'champion' alias so the Dockerfile can pull it by name.
-
-    MLflow Model Registry API:
-        client.create_model_version(name, source, run_id)
-            -> returns a ModelVersion object with a .version attribute
-        client.set_registered_model_alias(name, alias, version)
-            -> assigns a named alias to a specific version
-    """
     logger.info("Evaluating models and registering the best one...")
-
     tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
     mlflow.set_tracking_uri(tracking_uri)
-
     client = mlflow.tracking.MlflowClient()
 
-    experiment = client.get_experiment_by_name(None) or client.get_experiment("0")
-    logger.info(f"Searching runs in experiment: {experiment.name}")
+    experiments = client.search_experiments()
+    experiment = next((e for e in experiments if e.name == "spotify-genre-classification"), None)
+    if experiment is None:
+        experiment = client.get_experiment("0")
+    if experiment is None:
+        logger.error("Experiment not found. Did you run train.py?")
+        return
 
+    logger.info(f"Searching runs in experiment: {experiment.name}")
     runs = client.search_runs(
         experiment_ids=[experiment.experiment_id],
         order_by=["metrics.accuracy DESC"],
@@ -48,18 +38,26 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
     logger.info(f"Best run: {best_run.info.run_id} (accuracy={best_accuracy:.4f})")
 
-    # TODO: Register the model and assign the 'champion' alias
-    #   1. Call client.create_model_version() to register model_uri under model_name
-    #   2. Call client.set_registered_model_alias() to tag that version as "champion"
+    try:
+        client.create_registered_model(model_name)
+    except Exception:
+        pass
+
+    mv = client.create_model_version(
+        name=model_name,
+        source=model_uri,
+        run_id=best_run.info.run_id
+    )
+
+    client.set_registered_model_alias(model_name, "champion", mv.version)
+    logger.info(f"Model version {mv.version} registered as @champion")
 
     metrics = {
         "best_run_id": best_run.info.run_id,
         "best_accuracy": best_accuracy,
-        "model_type": best_run.data.params.get("model", "unknown"),
         "model_name": model_name,
         "champion_alias": "champion"
     }
-
     with open("metrics.json", "w") as f:
         json.dump(metrics, f, indent=2)
 
@@ -67,4 +65,8 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
 
 if __name__ == "__main__":
-    evaluate_and_register()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--train_data", type=str, default="data/train.csv")
+    args = parser.parse_args()
+    evaluate_and_register(args.train_data)

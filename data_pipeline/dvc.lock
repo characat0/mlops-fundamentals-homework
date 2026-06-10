@@ -1,0 +1,78 @@
+schema: '2.0'
+stages:
+  load:
+    cmd: python src/load.py --source_path songs.csv --output_path data/raw.csv
+    deps:
+    - path: songs.csv
+      hash: md5
+      md5: 0e71e2c46244acac485bd8c245aa6e56
+      size: 856462614
+    - path: src/load.py
+      hash: md5
+      md5: 3bc9713090f10b25aba105780ca55ab2
+      size: 1283
+    outs:
+    - path: data/raw.csv
+      hash: md5
+      md5: dc43e1e7b6ee08374926e772529e94cc
+      size: 857013234
+  process:
+    cmd: python src/process.py --input_path data/raw.csv --train_output 
+      data/train.csv --prod_output data/prod_sim.csv --year_threshold 2010
+    deps:
+    - path: data/raw.csv
+      hash: md5
+      md5: dc43e1e7b6ee08374926e772529e94cc
+      size: 857013234
+    - path: src/process.py
+      hash: md5
+      md5: 6d5516cfc84f5a0916758714b2cbe16c
+      size: 1566
+    outs:
+    - path: data/prod_sim.csv
+      hash: md5
+      md5: d4c3720cfa13169cff84b2e536f0f9a7
+      size: 442382066
+    - path: data/train.csv
+      hash: md5
+      md5: da8d9a5e1bb458d9a1ab9058b3f21dd8
+      size: 414631409
+  train:
+    cmd: python src/train.py --data_path data/train.csv --params_path 
+      params.yaml
+    deps:
+    - path: data/train.csv
+      hash: md5
+      md5: da8d9a5e1bb458d9a1ab9058b3f21dd8
+      size: 414631409
+    - path: params.yaml
+      hash: md5
+      md5: 972d4efe1beb0899d3bed51cee932ace
+      size: 455
+    - path: src/train.py
+      hash: md5
+      md5: 4bb5e9c445d0d2f497b8793439c1cae6
+      size: 3034
+    outs:
+    - path: models/
+      hash: md5
+      md5: dbc0c6c41a9f706777a1a767e9b0cf75.dir
+      size: 4695611
+      nfiles: 2
+  evaluate:
+    cmd: python src/evaluate.py --train_data data/train.csv
+    deps:
+    - path: models/
+      hash: md5
+      md5: dbc0c6c41a9f706777a1a767e9b0cf75.dir
+      size: 4695611
+      nfiles: 2
+    - path: src/evaluate.py
+      hash: md5
+      md5: d29d9efb209e34b2f8a7b6070fcada04
+      size: 2360
+    outs:
+    - path: metrics.json
+      hash: md5
+      md5: 6100e5a3e3e036bd7c0d9f031794547a
+      size: 175

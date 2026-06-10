@@ -69,3 +69,8 @@ htmlcov/
 .tmp/
 tmp/
 *.log
+
+*.zip
+mlflow.db
+%USERPROFILE%/.kaggle/
+mlartifacts/

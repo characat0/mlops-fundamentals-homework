@@ -7,7 +7,6 @@ stages:
     outs:
       - data/raw.csv:
           cache: false
-
   process:
     cmd: python src/process.py --input_path data/raw.csv --train_output data/train.csv --prod_output data/prod_sim.csv --year_threshold ${data.train_year_threshold}
     deps:
@@ -16,18 +15,15 @@ stages:
     outs:
       - data/train.csv
       - data/prod_sim.csv
-
   train:
     cmd: python src/train.py --data_path data/train.csv --params_path params.yaml
     deps:
       - data/train.csv
       - src/train.py
-    params:
-      - train:
+      - params.yaml
     outs:
       - models/:
           cache: false
-
   evaluate:
     cmd: python src/evaluate.py --train_data data/train.csv
     deps:
