@@ -83,12 +83,12 @@ def test_process_data_preserves_audio_features():
 
         # Validate all expected audio feature columns are present in both splits
         for feature in expected_audio_features:
-                    assert feature in train_df.columns, (
-                        f"Missing audio feature '{feature}' in training data"
-                    )
-                    assert feature in prod_df.columns, (
-                        f"Missing audio feature '{feature}' in production data"
-                    )
+            assert feature in train_df.columns, (
+                f"Missing audio feature '{feature}' in training data"
+            )
+            assert feature in prod_df.columns, (
+                f"Missing audio feature '{feature}' in production data"
+            )
 
 
 def test_process_data_year_boundary_condition():
