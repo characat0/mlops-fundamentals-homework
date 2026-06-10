@@ -7,6 +7,9 @@ data/prod_sim.csv
 data/songs.csv
 data/artists.csv
 
+# Personal working notes (kept locally only)
+ANALYSIS.md
+
 # Models and artifacts
 models/
 mlruns/
