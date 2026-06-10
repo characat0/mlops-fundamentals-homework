@@ -6,8 +6,8 @@ Authentication resolution order (first match wins):
     2. File at ~/.kaggle/access_token (single-token format).
     3. Legacy file at ~/.kaggle/kaggle.json (KAGGLE_USERNAME + KAGGLE_KEY).
 
-Loads credentials from a local .env file (project root) if present,
-so the secrets stay out of the shell and the repository.
+Loads credentials from a local .env file in this module's directory if
+present, so the secrets stay out of the shell and the repository.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ KAGGLE_DATASET = "serkantysz/550k-spotify-songs-audio-lyrics-and-genres"
 
 
 def _load_dotenv() -> None:
-    """Load variables from a .env file in the data_pipeline directory if present."""
+    """Load variables from a .env file in this module's directory if present."""
     try:
         from dotenv import load_dotenv
     except ImportError:
