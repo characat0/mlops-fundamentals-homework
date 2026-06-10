@@ -17,6 +17,9 @@ mlruns/
 mlflow.db
 mlflow.db-*
 
+# DVC local remote storage
+dvc-storage/
+
 # API logs (production data)
 logs/
 api_requests.jsonl
@@ -27,6 +30,11 @@ metrics.json
 .env
 .env.local
 .env.*.local
+
+# Kaggle credentials
+.kaggle/
+kaggle.json
+access_token
 
 # Python
 __pycache__/

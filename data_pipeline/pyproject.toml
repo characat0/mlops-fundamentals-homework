@@ -31,4 +31,6 @@ addopts = "-ra"
 [dependency-groups]
 dev = [
     "pytest>=8.0",
+    "kaggle>=2.2.1",
+    "python-dotenv>=1.0.1",
 ]
