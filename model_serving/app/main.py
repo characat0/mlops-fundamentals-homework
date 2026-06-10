@@ -1,22 +1,42 @@
 import json
 import logging
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 
 import joblib
-import mlflow
 import numpy as np
+import xgboost as xgb
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Spotify Genre Classifier API", version="1.0.0")
 
-MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
-LOGS_DIR = Path(__file__).resolve().parent.parent / "logs"
+@asynccontextmanager
+async def lifespan(application: FastAPI) -> AsyncGenerator:
+    """Pre-load model artifacts at startup so the first request is fast."""
+    logger.info(f"Loading model from {MODELS_DIR}...")
+    _load_artifacts()
+    logger.info("Model loaded — ready to serve predictions.")
+    yield
+
+
+app = FastAPI(title="Spotify Genre Classifier API", version="1.0.0", lifespan=lifespan)
+
+_BASE_DIR = Path(__file__).resolve().parent.parent
+_REMOTE_MODELS = _BASE_DIR / "models" / "remote"
+_LOCAL_MODELS = _BASE_DIR / "models" / "local"
+
+# Prefer models/remote/ (downloaded from MLflow at build-time) over
+# models/local/ (committed fallback). This allows the Dockerfile to
+# pull a fresh @champion while keeping the local copy as safety net.
+MODELS_DIR = _REMOTE_MODELS if (_REMOTE_MODELS / "model.ubj").is_file() else _LOCAL_MODELS
+
+LOGS_DIR = _BASE_DIR / "logs"
 API_LOG_PATH = LOGS_DIR / "api_requests.jsonl"
 
 AUDIO_FEATURES = [
@@ -58,10 +78,14 @@ class PredictionResponse(BaseModel):
 @lru_cache(maxsize=1)
 def _load_artifacts():
     """
-    Load the champion model and the preprocessing artifacts (label encoder,
-    scaler, feature order) from the local ./models directory.
-    The Dockerfile bakes these in at build time via the MLflow download step
-    and copies the preprocessors next to them.
+    Load the champion model and preprocessing artifacts.
+
+    Resolution order:
+      1. models/remote/ — fresh download from MLflow (docker build with
+         DOWNLOAD_MODEL=true)
+      2. models/local/  — committed fallback (always present in the repo)
+
+    The model is loaded directly via xgboost (no mlflow runtime needed).
     """
     if not (MODELS_DIR / "label_encoder.joblib").is_file():
         raise FileNotFoundError(
@@ -71,7 +95,11 @@ def _load_artifacts():
     label_encoder = joblib.load(MODELS_DIR / "label_encoder.joblib")
     scaler = joblib.load(MODELS_DIR / "scaler.joblib")
     feature_order = joblib.load(MODELS_DIR / "feature_order.joblib")
-    model = mlflow.pyfunc.load_model(str(MODELS_DIR))
+
+    # Load XGBoost model directly from the .ubj file (no mlflow needed).
+    model = xgb.XGBClassifier()
+    model.load_model(str(MODELS_DIR / "model.ubj"))
+
     return model, label_encoder, scaler, feature_order
 
 
@@ -116,14 +144,11 @@ def predict_genre(features: SpotifyFeatures) -> PredictionResponse:
         [[getattr(features, name) for name in feature_order]],
         dtype=float,
     )
-    impl = getattr(model, "_model_impl", model)
-    underlying = getattr(impl, "xgb_model", impl)
-    is_tree_based = underlying.__class__.__name__ == "XGBClassifier"
-    X_to_use = feature_vector if is_tree_based else scaler.transform(feature_vector)
-    predicted_class = int(underlying.predict(X_to_use)[0])
+    # XGBoost handles scaling internally — no scaler needed for tree models.
+    predicted_class = int(model.predict(feature_vector)[0])
     predicted_genre = label_encoder.inverse_transform([predicted_class])[0]
     confidence = 0.0
-    if hasattr(underlying, "predict_proba"):
-        proba = underlying.predict_proba(X_to_use)[0]
+    if hasattr(model, "predict_proba"):
+        proba = model.predict_proba(feature_vector)[0]
         confidence = float(np.max(proba))
     return PredictionResponse(genre=predicted_genre, confidence=round(confidence, 4))

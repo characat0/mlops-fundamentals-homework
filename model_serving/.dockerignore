@@ -11,8 +11,8 @@ logs/
 mlflow.db
 mlflow.db-*
 
-# Local model (downloaded at build time inside the image)
-models/
+# Remote models (downloaded inside the image at build-time)
+models/remote/
 
 # Tests (not needed in production image; CI runs them separately)
 tests/
@@ -21,8 +21,15 @@ tests/
 .git/
 .gitignore
 
+# Docker compose (not needed inside image)
+docker-compose.yml
+
 # Editor / OS
 .vscode/
 .idea/
 .DS_Store
 *.swp
+
+# Legacy directories (migrated to models/local/)
+models_local/
+preprocessors/

@@ -2,30 +2,26 @@
 #
 # Multi-stage build for the Spotify Genre Classifier API.
 #
-# Stage 1 (builder):
-#   - Installs uv and the full set of runtime dependencies.
-#   - Copies the application code and the pre-baked model artifacts
-#     (models_local/ + preprocessors/).
+# Uses the official Astral uv image (ghcr.io/astral-sh/uv) which
+# includes Python 3.14 + uv pre-installed. No pip needed.
 #
-# Stage 2 (runtime):
-#   - Slim Python image, no uv, no MLflow CLI, no compilers.
-#   - Copies the .venv and the model artifacts from the builder.
-#   - Runs uvicorn as a non-root user.
+# Model loading strategy (Approach B):
+#   models/local/  — champion committed to git (offline fallback)
+#   models/remote/ — downloaded from MLflow at build-time (preferred)
 #
-# The @champion model is committed to the repo under models_local/ and
-# the preprocessor artifacts live in preprocessors/. This makes the
-# build fully reproducible and offline — no MLflow server connection is
-# required. To promote a new champion: copy the new model files into
-# models_local/, the new preprocessors into preprocessors/, commit,
-# rebuild.
-#
-# Example:
+# Build without MLflow (offline, uses local fallback):
 #   docker build -t spotify-api .
+#
+# Build with MLflow (downloads @champion):
+#   docker build --build-arg MLFLOW_TRACKING_URI=http://host.docker.internal:5000 \
+#                --build-arg DOWNLOAD_MODEL=true -t spotify-api .
+#
+# Run:
 #   docker run --rm -p 8000:8000 spotify-api
 # ---------------------------------------------------------------------------
 
 # ---------- Stage 1: builder ----------
-FROM python:3.14-slim AS builder
+FROM ghcr.io/astral-sh/uv:0.11.2-python3.14-trixie-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -35,33 +31,39 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install uv once and pin it so the lockfile resolution is reproducible.
-RUN pip install --no-cache-dir uv==0.11.2
-
-# Copy only the dependency manifests first to leverage Docker layer caching:
-# code changes won't invalidate the (slow) dependency installation layer.
+# Copy dependency manifests first for Docker layer caching.
 COPY pyproject.toml uv.lock ./
 
-# Install runtime deps into /app/.venv (no dev deps, no project itself).
-# `uv sync --no-dev --no-install-project` is the recommended pattern from
-# the uv docs for container builds because it skips the project wheel
-# (we never `import model_serving`, only `app.main`).
+# Install runtime deps (no dev deps, no project wheel).
 RUN uv sync --no-dev --no-install-project
 
-# Copy the application code (needed for the project to be importable).
+# Copy the application code.
 COPY app ./app
 
-# Bake the @champion model and the preprocessor artifacts into the
-# image. The champion was promoted to the repo under models_local/ and
-# the preprocessors live in preprocessors/ (both versioned alongside
-# the code, so the image is fully reproducible and self-contained
-# at build time — no MLflow server required).
-#
-# The API loads from /app/models/ via mlflow.pyfunc.load_model and
-# joblib.load, so the destination needs MLmodel + model.ubj + the
-# three .joblib files all at the same level.
-COPY models_local/ /app/models/
-COPY preprocessors/*.joblib /app/models/
+# --- Model artifacts ---
+
+# Always copy the local fallback (committed to git).
+COPY models/local/ /app/models/local/
+
+# Attempt to download @champion from MLflow Model Registry.
+# If DOWNLOAD_MODEL=true and MLflow is reachable, the model is saved
+# to models/remote/. If it fails, the build continues (fallback works).
+ARG MLFLOW_TRACKING_URI=http://localhost:5000
+ARG DOWNLOAD_MODEL=false
+
+RUN if [ "$DOWNLOAD_MODEL" = "true" ]; then \
+      uv pip install --system mlflow==3.13.0 && \
+      mkdir -p /app/models/remote && \
+      mlflow models download \
+        --tracking-uri "$MLFLOW_TRACKING_URI" \
+        -m "models:/spotify-genre-classifier@champion" \
+        -d /app/models/remote \
+        --no-directory && \
+      echo "✓ Downloaded @champion from MLflow" || \
+      echo "⚠ MLflow download failed — will use local fallback"; \
+    else \
+      echo "⊘ DOWNLOAD_MODEL=false — skipping MLflow download"; \
+    fi
 
 
 # ---------- Stage 2: runtime ----------
@@ -70,44 +72,37 @@ FROM python:3.14-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:${PATH}" \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    MLFLOW_DISABLE_ENV_MANAGER_REQUIREMENTS_CHECK=true
 
 WORKDIR /app
 
-# Create a non-root user with a stable uid. Using uid 1000 keeps the
-# home directory and any bind-mounted volumes writable without surprises.
+# Non-root user for security.
 RUN groupadd --system --gid 1000 appuser && \
     useradd  --system --uid 1000 --gid appuser \
              --home-dir /app --shell /usr/sbin/nologin appuser
 
-# Copy the prepared virtualenv from the builder. Keeping it intact means
-# the runtime image does not need uv, pip, compilers, or any build tools.
+# Copy virtualenv from builder.
 COPY --from=builder /app/.venv /app/.venv
 
-# Copy the application code and the baked-in model artifacts.
+# Copy application code.
 COPY --from=builder /app/app /app/app
+
+# Copy model artifacts (local fallback always present).
 COPY --from=builder /app/models /app/models
 
-# Pre-create the logs directory and hand it to the unprivileged user so
-# the request-logging middleware can write to api_requests.jsonl. We
-# chown the writable paths explicitly (app/, logs/) instead of the
-# whole tree, because recursively chowning .venv over hundreds of
-# thousands of files is a noticeable slowdown.
+# Create logs directory for the request-logging middleware.
+# Only chown app code and models (small). Skip .venv — it's read-only
+# and owned by root, but accessible by all (755 from the base image).
 RUN mkdir -p /app/logs && \
-    chown -R appuser:appuser /app/app /app/models /app/logs && \
-    chmod -R u+rX,g+rX /app/.venv
+    chown -R appuser:appuser /app/app /app/models /app/logs
 
 USER appuser
 
 EXPOSE 8000
 
-# Container-level health check: hits the /health endpoint every 30s and
-# considers the container unhealthy after 3 consecutive failures. Matches
-# the /health endpoint implemented in app.main.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request, sys; \
 sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).status == 200 else 1)"
 
-# `exec` form so the uvicorn process is PID 1 and receives SIGTERM
-# directly from the container runtime (no shell wrapping).
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
