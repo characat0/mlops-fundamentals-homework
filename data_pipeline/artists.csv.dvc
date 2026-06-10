@@ -1,0 +1,5 @@
+outs:
+- md5: 8631c015a908c3a55e0325fba9c6243b
+  size: 5429571
+  hash: md5
+  path: artists.csv
