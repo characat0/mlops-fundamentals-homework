@@ -1,11 +1,9 @@
 """
 Download the Spotify songs dataset from Kaggle and verify its integrity.
-
 Authentication resolution order (first match wins):
     1. KAGGLE_API_TOKEN environment variable (recommended, post-2025).
     2. File at ~/.kaggle/access_token (single-token format).
     3. Legacy file at ~/.kaggle/kaggle.json (KAGGLE_USERNAME + KAGGLE_KEY).
-
 Loads credentials from a local .env file in this module's directory if
 present, so the secrets stay out of the shell and the repository.
 """
@@ -27,7 +25,6 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DEST = REPO_ROOT / "data" / "songs.csv"
@@ -61,17 +58,14 @@ def _file_md5(path: Path, chunk_size: int = 1024 * 1024) -> str:
 
 def _resolve_credentials() -> str | None:
     """Returns a short human-readable description of the auth source, or None.
-
     The actual credentials are read by the Kaggle CLI itself, so this
     function only reports which method will be used.
     """
     if os.environ.get("KAGGLE_API_TOKEN"):
         return "KAGGLE_API_TOKEN env var"
-
     access_token = Path.home() / ".kaggle" / "access_token"
     if access_token.is_file() and access_token.stat().st_size > 0:
         return f"file {access_token}"
-
     legacy = Path.home() / ".kaggle" / "kaggle.json"
     if legacy.is_file():
         try:
@@ -80,16 +74,19 @@ def _resolve_credentials() -> str | None:
                 return f"legacy file {legacy}"
         except (json.JSONDecodeError, OSError):
             pass
-
-    return None
+        return None
 
 
 def _run_kaggle_download(dest_dir: Path) -> Path:
     """Invoke `kaggle datasets download` and return the resulting CSV path."""
     cmd = [
-        "kaggle", "datasets", "download",
-        "-d", KAGGLE_DATASET,
-        "-p", str(dest_dir),
+        "kaggle",
+        "datasets",
+        "download",
+        "-d",
+        KAGGLE_DATASET,
+        "-p",
+        str(dest_dir),
         "--unzip",
     ]
     logger.info("Running: %s", " ".join(cmd))
@@ -105,7 +102,8 @@ def verify(dest: Path) -> bool:
     if digest != EXPECTED_MD5:
         logger.error(
             "MD5 mismatch.\n  expected: %s\n  got:      %s",
-            EXPECTED_MD5, digest,
+            EXPECTED_MD5,
+            digest,
         )
         return False
     logger.info("MD5 OK: %s", digest)
@@ -115,20 +113,20 @@ def verify(dest: Path) -> bool:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
-        "--dest", type=Path, default=DEFAULT_DEST,
+        "--dest",
+        type=Path,
+        default=DEFAULT_DEST,
         help=f"Destination path for songs.csv (default: {DEFAULT_DEST})",
     )
     parser.add_argument(
-        "--check-only", action="store_true",
+        "--check-only",
+        action="store_true",
         help="Only verify the existing file at --dest; do not download.",
     )
     args = parser.parse_args()
-
     _load_dotenv()
-
     if args.check_only:
         return 0 if verify(args.dest) else 1
-
     auth = _resolve_credentials()
     if auth is None:
         logger.error(
@@ -140,20 +138,18 @@ def main() -> int:
         )
         return 1
     logger.info("Auth source: %s", auth)
-
     args.dest.parent.mkdir(parents=True, exist_ok=True)
     csv_path = _run_kaggle_download(args.dest.parent)
     if csv_path.resolve() != args.dest.resolve():
         shutil.move(str(csv_path), args.dest)
-    logger.info("Saved dataset to %s", args.dest)
-
-    if not verify(args.dest):
-        logger.error(
-            "Downloaded file failed integrity check. "
-            "Re-run with --check-only after removing the bad file."
-        )
-        return 2
-    return 0
+        logger.info("Saved dataset to %s", args.dest)
+        if not verify(args.dest):
+            logger.error(
+                "Downloaded file failed integrity check. "
+                "Re-run with --check-only after removing the bad file."
+            )
+            return 2
+        return 0
 
 
 if __name__ == "__main__":
