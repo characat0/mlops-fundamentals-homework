@@ -109,8 +109,8 @@ def predict_genre(features: SpotifyFeatures) -> PredictionResponse:
         return PredictionResponse(genre="Pop", confidence=0.85)
 
     try:
-        import mlflow.sklearn
         import mlflow.pyfunc
+        import pandas as pd
 
         model = mlflow.pyfunc.load_model(str(models_path))
 
@@ -118,28 +118,40 @@ def predict_genre(features: SpotifyFeatures) -> PredictionResponse:
             [getattr(features, name) for name in FEATURE_NAMES]
         ]
 
-        import pandas as pd
         X = pd.DataFrame(feature_vector, columns=FEATURE_NAMES)
-        prediction = model.predict(X)
 
+        # Generic prediction (works for any champion model)
+        prediction = model.predict(X)
         predicted_index = int(prediction[0])
 
-        # Try to get probabilities for confidence score
-        try:
-            underlying = model._model_impl
-            proba = underlying.predict_proba(X)
-            confidence = float(proba[0].max())
-        except Exception:
-            confidence = 0.85
+        # Default confidence
+        confidence = 0.85
 
-        # Map class index to genre label
+        # Optional confidence if model supports probabilities
+        try:
+            raw_model = getattr(model._model_impl, "model", None)
+
+            if raw_model and hasattr(raw_model, "predict_proba"):
+                proba = raw_model.predict_proba(X)
+                confidence = float(proba[0].max())
+
+        except Exception as e:
+            logger.warning(f"Confidence unavailable: {e}")
+
+        # Map prediction index to genre
         if predicted_index < len(GENRE_LABELS):
             genre = GENRE_LABELS[predicted_index]
         else:
             genre = str(predicted_index)
-        return PredictionResponse(genre=genre, confidence=confidence)
 
+        return PredictionResponse(
+            genre=genre,
+            confidence=confidence
+        )
 
     except Exception as e:
         logger.error(f"Model inference error: {e}")
-        return PredictionResponse(genre="Pop", confidence=0.85)
+        return PredictionResponse(
+            genre="Pop",
+            confidence=0.85
+        )
