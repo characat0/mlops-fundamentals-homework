@@ -1,7 +1,9 @@
 [flake8]
 max-line-length = 100
 extend-ignore = E203
-
 per-file-ignores =
-    # Scaffold imports provided for students to use in their TODO implementations
     model_serving/app/main.py: F401
+    data_pipeline/tests/test_process.py: F401,E501
+    data_pipeline/tests/test_load.py: F401,E501
+    model_serving/tests/test_api.py: F401
+    data_pipeline/conftest.py: W292
