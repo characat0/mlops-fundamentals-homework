@@ -5,6 +5,7 @@ data/raw.csv
 data/train.csv
 data/prod_sim.csv
 data/
+*.db
 
 # Models and artifacts
 models/
