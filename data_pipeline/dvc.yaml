@@ -18,7 +18,7 @@ stages:
       - data/prod_sim.csv
 
   train:
-    cmd: python src/train.py --data_path data/train.csv --params_path params.yaml --tracking_uri http://localhost:5000 --models_dir models
+    cmd: python src/train.py --data_path data/train.csv --params_path params.yaml --models_dir models
     deps:
       - data/train.csv
       - src/train.py
