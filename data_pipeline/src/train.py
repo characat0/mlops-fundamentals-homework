@@ -58,7 +58,7 @@ def train(data_path: str, params: dict):
     # FEATURE SELECTION:
     # Students should select features from the Kaggle dataset.
     # Drop all metadata and non-audio columns:
-    # You can use the lyrics column if you want, but it requires 
+    # You can use the lyrics column if you want, but it requires
     # additional text processing and may not be
     # necessary for good performance.
     # Target is 'genre', features are audio features
@@ -85,9 +85,9 @@ def train(data_path: str, params: dict):
         pickle.dump(y_encoded, f)
 
     # SCALING:
-    # Use StandardScaler for LogisticRegression to standardize features 
+    # Use StandardScaler for LogisticRegression to standardize features
     # (zero mean, unit variance).
-    # XGBoost handles feature scaling internally, so do NOT scale features 
+    # XGBoost handles feature scaling internally, so do NOT scale features
     # when using XGBoost.
     # This means you may need different scaling strategies per model type:
     # - For LogisticRegression: scale the features before training

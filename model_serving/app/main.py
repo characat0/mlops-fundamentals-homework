@@ -122,7 +122,8 @@ def load_model():
         logger.error(f"Fallo al cargar modelo desde cache: {e}. Limpiando cache...")
         shutil.rmtree(cache_dir)
         raise RuntimeError(
-            f"Modelo en cache inválido y fue eliminado. Reinicia el servicio para re-descargarlo. Error: {e}"
+            f"Modelo en cache inválido y fue eliminado."
+            f"Reinicia el servicio para re-descargarlo. Error: {e}"
         ) from e
 
 

@@ -75,7 +75,9 @@ def run_ks_analysis(train_df: pd.DataFrame, prod_df: pd.DataFrame, output_path: 
     drifted = drift_results["features_with_drift"]
     total = len(features_to_test)
     drift_results["drift_percentage"] = (drifted / total * 100) if total > 0 else 0
-    drift_results["status"] = "DRIFT_DETECTED" if drift_results["drift_percentage"] > 20 else "NORMAL"
+    drift_results["status"] = (
+            "DRIFT_DETECTED" if drift_results["drift_percentage"] > 20 else "NORMAL"
+        )
 
     logger.info(f"Status: {drift_results['status']} "
                 f"({drifted}/{total} features drifted)")
