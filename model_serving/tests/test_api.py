@@ -1,6 +1,8 @@
-import pytest
+import pytest  # noqa: F401  (re-exported for test discovery)
+
 from fastapi.testclient import TestClient
-from app.main import app, SpotifyFeatures
+
+from app.main import app, SpotifyFeatures  # noqa: F401  (used implicitly via app)
 
 client = TestClient(app)
 

@@ -100,7 +100,7 @@ def evaluate_and_register(train_data_path: str = "data/train.csv") -> None:
     with open("metrics.json", "w") as f:
         json.dump(metrics, f, indent=2)
 
-    logger.info(f"Evaluation complete. Metrics saved to metrics.json")
+    logger.info("Evaluation complete. Metrics saved to metrics.json")
     logger.info(
         f"Champion: {MODEL_NAME} v{model_version.version} "
         f"(@{CHAMPION_ALIAS}, accuracy={best_accuracy:.4f})"

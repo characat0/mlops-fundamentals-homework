@@ -6,6 +6,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def process_data(
     input_path: str, train_output: str, prod_output: str, year_threshold: int = 2010
 ):

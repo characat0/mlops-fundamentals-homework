@@ -1,21 +1,19 @@
+import json
+import logging
 from datetime import datetime, timezone
 from functools import lru_cache
-import json
 from pathlib import Path
 
 import joblib
 import mlflow
-import mlflow.sklearn
 import numpy as np
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 
-app = FastAPI(title="Spotify Genre Classifier API", version="1.0.0")
-
-import logging
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+app = FastAPI(title="Spotify Genre Classifier API", version="1.0.0")
 
 MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
 LOGS_DIR = Path(__file__).resolve().parent.parent / "logs"
@@ -90,8 +88,10 @@ async def log_requests(request: Request, call_next):
     record = {"timestamp": datetime.now(timezone.utc).isoformat(), **payload}
     with API_LOG_PATH.open("a", encoding="utf-8") as f:
         f.write(json.dumps(record) + "\n")
+
     async def receive():
         return {"type": "http.request", "body": body_bytes}
+
     request = Request(request.scope, receive)
     return await call_next(request)
 
