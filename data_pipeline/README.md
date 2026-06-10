@@ -1,6 +1,6 @@
 # Data Pipeline
 
-DVC-orchestrated pipeline: load → process → train → evaluate.
+DVC orchestrated pipeline: Load → process → train → evaluate.
 
 ## Dataset Verification
 
