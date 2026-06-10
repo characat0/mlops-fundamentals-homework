@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DEST = REPO_ROOT / "songs.csv"
+DEFAULT_DEST = REPO_ROOT / "data" / "songs.csv"
 EXPECTED_MD5 = "0e71e2c46244acac485bd8c245aa6e56"
 
 KAGGLE_DATASET = "serkantysz/550k-spotify-songs-audio-lyrics-and-genres"

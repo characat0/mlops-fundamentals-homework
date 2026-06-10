@@ -4,7 +4,8 @@ songs.csv
 data/raw.csv
 data/train.csv
 data/prod_sim.csv
-data/
+data/songs.csv
+data/artists.csv
 
 # Models and artifacts
 models/
