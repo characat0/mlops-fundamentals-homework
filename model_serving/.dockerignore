@@ -1,0 +1,28 @@
+# Virtual environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Logs and runtime artifacts
+logs/
+*.log
+mlflow.db
+mlflow.db-*
+
+# Local model (downloaded at build time inside the image)
+models/
+
+# Tests (not needed in production image; CI runs them separately)
+tests/
+
+# Git metadata
+.git/
+.gitignore
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
