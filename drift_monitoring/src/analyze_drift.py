@@ -44,20 +44,31 @@ def run_ks_analysis(train_df: pd.DataFrame, prod_df: pd.DataFrame, output_path: 
 
     features_to_test = [f for f in AUDIO_FEATURES if f in train_df.columns and f in prod_df.columns]
 
-    # TODO: For each feature in features_to_test:
-    #   1. Extract the feature column from train_df and prod_df (drop NaNs with .dropna())
-    #   2. Run scipy.stats.ks_2samp(train_values, prod_values) → (ks_statistic, p_value)
-    #   3. Flag drift if p_value < 0.05
-    #   4. Store results in drift_results["details"][feature] with keys:
-    #        ks_statistic, p_value, drift_detected, train_mean, prod_mean
-    #   5. Increment drift_results["features_with_drift"] and append feature name to
-    #      drift_results["drifted_features"] if drift was detected
+    for feature in features_to_test:
+        train_values = train_df[feature].dropna()
+        prod_values = prod_df[feature].dropna()
+
+        ks_statistic, p_value = stats.ks_2samp(train_values, prod_values)
+        drift_detected = bool(p_value < 0.05)
+
+        drift_results["details"][feature] = {
+            "ks_statistic": float(ks_statistic),
+            "p_value": float(p_value),
+            "drift_detected": drift_detected,
+            "train_mean": float(train_values.mean()),
+            "prod_mean": float(prod_values.mean())
+        }
+
+        if drift_detected:
+            drift_results["features_with_drift"] += 1
+            drift_results["drifted_features"].append(feature)
 
     drifted = drift_results["features_with_drift"]
     total = len(features_to_test)
     drift_results["drift_percentage"] = (drifted / total * 100) if total > 0 else 0
-    drift_results["status"] = "DRIFT_DETECTED" if drift_results["drift_percentage"] > 20 else "NORMAL"
-
+    drift_results["status"] = (
+        "DRIFT_DETECTED" if drift_results["drift_percentage"] > 20 else "NORMAL"
+    )
     logger.info(f"Status: {drift_results['status']} "
                 f"({drifted}/{total} features drifted)")
 
