@@ -8,25 +8,26 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
-          
+          python-version: "3.11"
+
       - name: Install dependencies
         run: |
-          pip install flake8 pytest
+          pip install flake8 pytest httpx
           pip install -r data_pipeline/requirements.txt
           pip install -r model_serving/requirements.txt
           pip install -r drift_monitoring/requirements.txt
-          
-      - name: Run Linter
+
+      - name: Run linter
         run: flake8 .
-        
-      - name: Run Tests
+
+      - name: Run tests
         run: |
-          pytest data_pipeline/tests
-          pytest model_serving/tests
+          pytest data_pipeline/tests -v
+          pytest model_serving/tests -v

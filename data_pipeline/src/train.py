@@ -1,124 +1,190 @@
 import argparse
-import mlflow
-import yaml
-import pandas as pd
+import json
 import logging
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler, LabelEncoder
-import xgboost as xgb
+import os
+from typing import Dict, Tuple
+
 import joblib
+import mlflow
+import mlflow.sklearn
+import mlflow.xgboost
+import pandas as pd
+import xgboost as xgb
+import yaml
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+AUDIO_FEATURES = [
+    "danceability",
+    "energy",
+    "key",
+    "loudness",
+    "mode",
+    "speechiness",
+    "acousticness",
+    "instrumentalness",
+    "liveness",
+    "valence",
+    "tempo",
+    "duration_ms",
+]
 
-def train(data_path: str, params: dict):
-    """
-    Train multiple genre classification models and log them to MLflow.
 
-    **IMPORTANT: This is an intentionally incomplete skeleton for students to implement.**
-    Students are expected to complete the TODO sections below to build a complete
-    machine learning training pipeline with proper feature engineering, preprocessing,
-    model training, and MLflow logging.
+def _prepare_training_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
+    missing = [col for col in AUDIO_FEATURES + ["genre"] if col not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required columns: {missing}")
 
-    Args:
-        data_path: Path to training CSV file (from data pipeline)
-        params: Dictionary with hyperparameters from params.yaml
+    X = df[AUDIO_FEATURES].copy()
+    X = X.apply(pd.to_numeric, errors="coerce")
+    X = X.fillna(X.median(numeric_only=True))
 
-    Implementation Steps:
-        1. Load the training data from data_path
-        2. Separate features (X) from target (y)
-           - Target: 'genre' column (10 classes)
-           - Features: audio feature columns
-           - Drop metadata columns (id, name, artist, year, popularity, etc.)
-        3. Encode genre labels using LabelEncoder
-        4. Scale features using StandardScaler
-        5. For each model type in params['train']:
-           a. Start an MLflow run with run_name
-           b. Log parameters from params.yaml
-           c. Train the model on scaled X
-           d. Calculate accuracy metric
-           e. Log metrics to MLflow
-           f. Log model artifact with appropriate MLflow function
-           g. End the run
-    """
-    logger.info(f"Loading training data from {data_path}")
+    y = df["genre"].astype(str)
+    return X, y
+
+
+def _split_data(
+    X: pd.DataFrame,
+    y_encoded,
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+    counts = pd.Series(y_encoded).value_counts()
+    stratify = y_encoded if counts.min() >= 2 else None
+
+    return train_test_split(
+        X,
+        y_encoded,
+        test_size=0.2,
+        random_state=42,
+        stratify=stratify,
+    )
+
+
+def _classification_metrics(y_true, y_pred) -> Dict[str, float]:
+    return {
+        "accuracy": float(accuracy_score(y_true, y_pred)),
+        "precision_macro": float(
+            precision_score(y_true, y_pred, average="macro", zero_division=0)
+        ),
+        "recall_macro": float(
+            recall_score(y_true, y_pred, average="macro", zero_division=0)
+        ),
+        "f1_macro": float(f1_score(y_true, y_pred, average="macro", zero_division=0)),
+    }
+
+
+def train(data_path: str, params: dict) -> None:
+    """Train Logistic Regression and XGBoost models, then log them to MLflow."""
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+    mlflow.set_tracking_uri(tracking_uri)
+
+    logger.info("Using MLflow tracking URI: %s", tracking_uri)
+    logger.info("Loading training data from %s", data_path)
+
     df = pd.read_csv(data_path)
+    X, y = _prepare_training_data(df)
 
-    # FEATURE SELECTION:
-    # Students should select features from the Kaggle dataset.
-    # Drop all metadata and non-audio columns:
-    # You can use the lyrics column if you want, but it requires additional text processing and may not be
-    # necessary for good performance.
-    # Target is 'genre', features are audio features
-    X = df.drop(["genre", "year"], axis=1, errors='ignore')
-    y = df["genre"]
+    label_encoder = LabelEncoder()
+    y_encoded = label_encoder.fit_transform(y)
 
-    logger.info(f"Features shape: {X.shape}, Target shape: {y.shape}")
+    logger.info("Features shape: %s", X.shape)
+    logger.info("Classes: %s", list(label_encoder.classes_))
 
-    # ENCODING:
-    # Use LabelEncoder to encode genre labels numerically.
-    # The dataset has 10 distinct genre classes that need to be converted to integers (0-9).
-    # This is required for sklearn models which expect numeric target values.
-    # TODO: Encode genre labels (use LabelEncoder from sklearn)
+    X_train, X_valid, y_train, y_valid = _split_data(X, y_encoded)
 
-    # SCALING:
-    # Use StandardScaler for LogisticRegression to standardize features (zero mean, unit variance).
-    # XGBoost handles feature scaling internally, so do NOT scale features when using XGBoost.
-    # This means you may need different scaling strategies per model type:
-    # - For LogisticRegression: scale the features before training
-    # - For XGBoost: use original (unscaled) features
-    # TODO: Scale features using StandardScaler
+    os.makedirs("models", exist_ok=True)
+    joblib.dump(label_encoder, "models/label_encoder.joblib")
 
-    # Get hyperparameters
     train_params = params.get("train", {})
+    run_summaries = []
 
-    logger.info(f"Training {len(train_params)} model types...")
+    for model_name, model_params in train_params.items():
+        model_params = dict(model_params or {})
+        logger.info("Training model: %s", model_name)
 
-    # MODEL TRAINING LOOP STRUCTURE:
-    # The model loop should iterate through each model configuration in params['train'].
-    # Each model type (logistic_regression, xgboost) has its own hyperparameters and
-    # requires different preprocessing. The general structure should follow this pseudocode:
-    #
-    # for model_name, model_params in train_params.items():
-    #     # Determine which model class and features to use
-    #     if model_name == 'logistic_regression':
-    #         model = LogisticRegression(**model_params)
-    #         X_to_use = X_scaled  # Use scaled features
-    #     elif model_name == 'xgboost':
-    #         model = xgb.XGBClassifier(**model_params)
-    #         X_to_use = X  # Use original features (XGBoost handles scaling)
-    #
-    #     # Start MLflow run to track this model
-    #     with mlflow.start_run(run_name=model_name):
-    #         # Log all hyperparameters from the config
-    #         mlflow.log_params(model_params)
-    #
-    #         # Train the model
-    #         model.fit(X_to_use, y_encoded)
-    #
-    #         # Evaluate on training data and log metrics
-    #         y_pred = model.predict(X_to_use)
-    #         accuracy = calculate_accuracy(y, y_pred)
-    #         mlflow.log_metric("accuracy", accuracy)
-    #
-    #         # Save the trained model to MLflow
-    #         mlflow.sklearn.log_model(model, artifact_path="model")
-    #         # OR for XGBoost: mlflow.xgboost.log_model(model, artifact_path="model")
+        with mlflow.start_run(run_name=model_name) as run:
+            mlflow.log_param("model", model_name)
+            mlflow.log_params(model_params)
+            mlflow.log_param("features", ",".join(AUDIO_FEATURES))
 
-    # TODO: Loop through each model in train_params and:
-    #  1. Create appropriate model instance based on model_name:
-    #     - 'logistic_regression': LogisticRegression(**params)
-    #     - 'xgboost': xgb.XGBClassifier(**params)
-    #  2. Start MLflow run with run_name=model_name
-    #  3. Log parameters from config
-    #  4. Fit model on features and encoded target
-    #     - Use scaled X for LogisticRegression
-    #     - Use original X for XGBoost (it handles feature scaling internally)
-    #  5. Calculate accuracy metric (and optionally precision, recall, F1)
-    #  6. Log metrics to MLflow
-    #  7. Log model artifact with appropriate MLflow function
-    #  8. End run
+            if model_name == "logistic_regression":
+                classifier = LogisticRegression(**model_params)
+                model = Pipeline(
+                    steps=[
+                        ("scaler", StandardScaler()),
+                        ("classifier", classifier),
+                    ]
+                )
+                model.fit(X_train, y_train)
+                y_pred = model.predict(X_valid)
+
+                metrics = _classification_metrics(y_valid, y_pred)
+                mlflow.log_metrics(metrics)
+                mlflow.sklearn.log_model(
+                    sk_model=model,
+                    artifact_path="model",
+                    input_example=X_valid.head(3),
+                )
+
+            elif model_name == "xgboost":
+                model_params.setdefault("objective", "multi:softprob")
+                model_params.setdefault("eval_metric", "mlogloss")
+                model_params.setdefault("random_state", 42)
+                model_params.setdefault("n_jobs", -1)
+                model_params.setdefault("tree_method", "hist")
+
+                model = xgb.XGBClassifier(**model_params)
+                model.fit(X_train, y_train)
+                y_pred = model.predict(X_valid)
+
+                metrics = _classification_metrics(y_valid, y_pred)
+                mlflow.log_metrics(metrics)
+                mlflow.xgboost.log_model(
+                    xgb_model=model,
+                    artifact_path="model",
+                    input_example=X_valid.head(3),
+                )
+
+            else:
+                logger.warning("Skipping unsupported model type: %s", model_name)
+                continue
+
+            local_model_path = f"models/{model_name}.joblib"
+            joblib.dump(model, local_model_path)
+
+            summary = {
+                "run_id": run.info.run_id,
+                "model": model_name,
+                **metrics,
+            }
+            run_summaries.append(summary)
+
+            logger.info(
+                "Finished %s | accuracy=%.4f | f1_macro=%.4f",
+                model_name,
+                metrics["accuracy"],
+                metrics["f1_macro"],
+            )
+
+    summary_path = "models/training_summary.json"
+    with open(summary_path, "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "features": AUDIO_FEATURES,
+                "classes": list(label_encoder.classes_),
+                "runs": run_summaries,
+            },
+            f,
+            indent=2,
+        )
+
+    logger.info("Saved training summary to %s", summary_path)
 
 
 if __name__ == "__main__":
@@ -127,7 +193,7 @@ if __name__ == "__main__":
     parser.add_argument("--params_path", type=str, default="params.yaml")
     args = parser.parse_args()
 
-    with open(args.params_path, "r") as f:
-        params = yaml.safe_load(f)
+    with open(args.params_path, "r", encoding="utf-8") as f:
+        loaded_params = yaml.safe_load(f)
 
-    train(args.data_path, params)
+    train(args.data_path, loaded_params)
