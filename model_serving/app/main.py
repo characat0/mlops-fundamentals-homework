@@ -100,6 +100,7 @@ def predict_genre(features: SpotifyFeatures) -> PredictionResponse:
     except Exception:
         genres = ['Blues', 'Classical', 'Country', 'Electronic',
                   'Folk', 'Hip-Hop', 'Jazz', 'Pop', 'R&B', 'Rock']
-        predicted_genre = genres[int(prediction[0])] if int(prediction[0]) < len(genres) else "Unknown"
+        idx = int(prediction[0])
+        predicted_genre = genres[idx] if idx < len(genres) else "Unknown"
 
     return PredictionResponse(genre=predicted_genre, confidence=confidence)
