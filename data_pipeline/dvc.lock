@@ -1,0 +1,87 @@
+schema: '2.0'
+stages:
+  load:
+    cmd: python src/load.py --source_path songs.csv --output_path data/raw.csv
+    deps:
+    - path: songs.csv
+      hash: md5
+      md5: 0e71e2c46244acac485bd8c245aa6e56
+      size: 856462614
+    - path: src/load.py
+      hash: md5
+      md5: 3bc9713090f10b25aba105780ca55ab2
+      size: 1283
+    outs:
+    - path: data/raw.csv
+      hash: md5
+      md5: dc43e1e7b6ee08374926e772529e94cc
+      size: 857013234
+  process:
+    cmd: python src/process.py --input_path data/raw.csv --train_output 
+      data/train.csv --prod_output data/prod_sim.csv --year_threshold 2010
+    deps:
+    - path: data/raw.csv
+      hash: md5
+      md5: dc43e1e7b6ee08374926e772529e94cc
+      size: 857013234
+    - path: src/process.py
+      hash: md5
+      md5: f96891e201b4572772f608b8a454ff18
+      size: 2153
+    outs:
+    - path: data/prod_sim.csv
+      hash: md5
+      md5: d4c3720cfa13169cff84b2e536f0f9a7
+      size: 442382066
+    - path: data/train.csv
+      hash: md5
+      md5: da8d9a5e1bb458d9a1ab9058b3f21dd8
+      size: 414631409
+  train:
+    cmd: python src/train.py --data_path data/train.csv --params_path 
+      params.yaml
+    deps:
+    - path: data/train.csv
+      hash: md5
+      md5: da8d9a5e1bb458d9a1ab9058b3f21dd8
+      size: 414631409
+    - path: params.yaml
+      hash: md5
+      md5: 972d4efe1beb0899d3bed51cee932ace
+      size: 455
+    - path: src/train.py
+      hash: md5
+      md5: 0ec08477dc33cd78a40acc91327826ef
+      size: 1873
+    outs:
+    - path: models
+      hash: md5
+      md5: e0686d12d60d352980b19e566c2cfe29.dir
+      size: 4296415
+      nfiles: 2
+  evaluate:
+    cmd: python src/evaluate.py --data_path data/prod_sim.csv --model_path 
+      models --params_path params.yaml
+    deps:
+    - path: data/prod_sim.csv
+      hash: md5
+      md5: d4c3720cfa13169cff84b2e536f0f9a7
+      size: 442382066
+    - path: models
+      hash: md5
+      md5: e0686d12d60d352980b19e566c2cfe29.dir
+      size: 4296415
+      nfiles: 2
+    - path: params.yaml
+      hash: md5
+      md5: 972d4efe1beb0899d3bed51cee932ace
+      size: 455
+    - path: src/evaluate.py
+      hash: md5
+      md5: 29672f3d49eebcef740878efe9f0b8d2
+      size: 2735
+    outs:
+    - path: metrics.json
+      hash: md5
+      md5: c633ddfb889d0245f66e609f23462131
+      size: 203

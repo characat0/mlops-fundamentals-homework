@@ -11,15 +11,12 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
     """
     Find the best performing model and register it with @champion alias.
 
-    The scaffolding below handles connecting to MLflow and finding the best run.
-    Your job is to register that model in the MLflow Model Registry and assign
-    the 'champion' alias so the Dockerfile can pull it by name.
-
-    MLflow Model Registry API:
-        client.create_model_version(name, source, run_id)
-            -> returns a ModelVersion object with a .version attribute
-        client.set_registered_model_alias(name, alias, version)
-            -> assigns a named alias to a specific version
+    Steps:
+    1. Query MLflow API to find all runs
+    2. Compare by accuracy metric
+    3. Register the best model in MLflow Model Registry
+    4. Assign alias 'champion'
+    5. Save metrics summary to metrics.json
     """
     logger.info("Evaluating models and registering the best one...")
 
@@ -28,7 +25,8 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
     client = mlflow.tracking.MlflowClient()
 
-    experiment = client.get_experiment_by_name(None) or client.get_experiment("0")
+    # Usar experimento Default
+    experiment = client.get_experiment_by_name("Default") or client.get_experiment("0")
     logger.info(f"Searching runs in experiment: {experiment.name}")
 
     runs = client.search_runs(
@@ -41,6 +39,7 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
         logger.error("No runs found. Did you run train.py?")
         return
 
+    # Seleccionar el mejor run por accuracy
     best_run = runs[0]
     best_accuracy = best_run.data.metrics.get("accuracy", 0)
     model_uri = f"runs:/{best_run.info.run_id}/model"
@@ -48,10 +47,24 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
     logger.info(f"Best run: {best_run.info.run_id} (accuracy={best_accuracy:.4f})")
 
-    # TODO: Register the model and assign the 'champion' alias
-    #   1. Call client.create_model_version() to register model_uri under model_name
-    #   2. Call client.set_registered_model_alias() to tag that version as "champion"
+    # Crear el modelo registrado si no existe
+    try:
+        client.create_registered_model(model_name)
+        logger.info(f"Registered model '{model_name}' created.")
+    except Exception as e:
+        logger.info(f"Model '{model_name}' already exists or could not be created: {e}")
 
+    # Crear nueva versión del modelo
+    model_version = client.create_model_version(
+        name=model_name,
+        source=model_uri,
+        run_id=best_run.info.run_id
+    )
+
+    # Asignar alias champion
+    client.set_registered_model_alias(model_name, "champion", model_version.version)
+
+    # Guardar métricas en metrics.json
     metrics = {
         "best_run_id": best_run.info.run_id,
         "best_accuracy": best_accuracy,
@@ -64,6 +77,7 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
         json.dump(metrics, f, indent=2)
 
     logger.info("Evaluation complete. Metrics saved to metrics.json")
+    logger.info("Best model registered as @champion in MLflow Model Registry")
 
 
 if __name__ == "__main__":

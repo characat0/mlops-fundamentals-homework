@@ -2,110 +2,93 @@ from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 import json
 import logging
-import os
 from pathlib import Path
+from datetime import datetime
+import mlflow
+import numpy as np
+import pandas as pd
+import traceback
 
 app = FastAPI(title="Spotify Genre Classifier API", version="1.0.0")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-# TODO: Define the SpotifyFeatures Pydantic model.
-#
-# Include the audio feature fields from the Kaggle dataset, with the correct
-# Python types. The field names must match the column names exactly
-# (the tests send a payload with these exact keys).
-#
-# Example fields and types:
-#   danceability (float), energy (float), key (int), loudness (float),
-#   mode (int), speechiness (float), acousticness (float),
-#   instrumentalness (float), liveness (float), valence (float),
-#   tempo (float), duration_ms (int)
+# ✅ Modelo Pydantic con las features del dataset
 class SpotifyFeatures(BaseModel):
-    pass
-
+    danceability: float
+    energy: float
+    key: int
+    loudness: float
+    mode: int
+    speechiness: float
+    acousticness: float
+    instrumentalness: float
+    liveness: float
+    valence: float
+    tempo: float
+    duration_ms: int
 
 class PredictionResponse(BaseModel):
     genre: str
     confidence: float = 0.0
 
-
+# ✅ Middleware para loguear requests a /predict
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """
-    Log all incoming /predict requests to logs/api_requests.jsonl.
+    if request.method == "POST" and request.url.path == "/predict":
+        body_bytes = await request.body()
+        try:
+            body_json = json.loads(body_bytes.decode("utf-8"))
+            body_json["timestamp"] = datetime.utcnow().isoformat()
 
-    Logging here (middleware) rather than inside the endpoint keeps
-    observability separate from business logic — easier to disable, test,
-    and extend (rate limiting, metrics) without touching endpoint code.
+            logs_dir = Path("logs")
+            logs_dir.mkdir(exist_ok=True)
+            with open(logs_dir / "api_requests.jsonl", "a") as f:
+                f.write(json.dumps(body_json) + "\n")
+        except Exception as e:
+            logger.error(f"Logging failed: {e}")
 
-    TODO:
-      1. Only log POST requests to "/predict"
-      2. Read the body: body_bytes = await request.body()
-      3. Parse as JSON, add a "timestamp" field (datetime.utcnow().isoformat())
-      4. Append a JSON line to logs/api_requests.jsonl (create logs/ if needed)
-      5. Reconstruct the request so the endpoint can still read it:
-             async def receive():
-                 return {"type": "http.request", "body": body_bytes}
-             request = Request(request.scope, receive)
-      6. Call response = await call_next(request) and return it
-    """
+        async def receive():
+            return {"type": "http.request", "body": body_bytes}
+        request = Request(request.scope, receive)
+
     response = await call_next(request)
     return response
 
+# ✅ Endpoint de salud
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
 
-# TODO: Implement the GET /health endpoint.
-#   It should return {"status": "healthy"} with a 200 status code.
-#   This is used by load balancers and CI checks to verify the API is up.
-
-
+# ✅ Endpoint de predicción
 @app.post("/predict", response_model=PredictionResponse)
 def predict(features: SpotifyFeatures) -> PredictionResponse:
-    """Predict Spotify track genre from audio features."""
     try:
-        prediction = predict_genre(features)
-        return prediction
+        return predict_genre(features)
     except Exception as e:
-        logger.error(f"Prediction failed: {str(e)}")
+        logger.error("Prediction failed:\n" + traceback.format_exc())
         raise HTTPException(status_code=500, detail="Prediction failed")
 
-
+# ✅ Lógica de predicción con MLflow PyFunc
 def predict_genre(features: SpotifyFeatures) -> PredictionResponse:
-    """
-    **IMPORTANT: This is an intentionally incomplete skeleton for students to implement.**
+    # ⚠️ Cargar modelo champion desde ./models (no ./models/model)
+    model = mlflow.pyfunc.load_model("./models")
 
-    Students must:
-    1. Load the MLflow model registered with the @champion alias
-       - The model is baked into the Docker container at ./models/
-       - Use: mlflow.sklearn.load_model("./models")
-    2. Convert SpotifyFeatures to the format expected by the model
-       - Extract feature values in the correct order (order matters for sklearn models)
-       - Must match the audio features used during training
-    3. Perform inference on the audio features
-    4. Map the predicted class index back to genre name
-    5. Return a PredictionResponse with the genre and confidence score
+    # Convertir features a DataFrame
+    df = pd.DataFrame([features.dict()])
 
-    Example implementation structure:
-        import mlflow
+    # Predecir
+    prediction = model.predict(df)
 
-        model = mlflow.sklearn.load_model("./models")
+    # ⚠️ Si el modelo no soporta predict_proba, dejamos confidence = 0.0
+    confidence = 0.0
+    if hasattr(model, "predict_proba"):
+        try:
+            probabilities = model.predict_proba(df)
+            confidence = float(np.max(probabilities[0]))
+        except Exception:
+            pass
 
-        feature_names = [
-            'danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness',
-            'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'duration_ms'
-        ]
-        feature_vector = [getattr(features, name) for name in feature_names]
-
-        prediction = model.predict([feature_vector])
-        probabilities = model.predict_proba([feature_vector])
-        confidence = float(probabilities[0].max())
-
-        # Map numeric class index back to genre label using the LabelEncoder
-        # you saved during training, or hardcode the genre list if consistent.
-
-        return PredictionResponse(genre=predicted_genre, confidence=confidence)
-
-    For now, returns a placeholder so API tests pass:
-    """
-    return PredictionResponse(genre="Pop", confidence=0.85)
+    predicted_genre = str(prediction[0])
+    return PredictionResponse(genre=predicted_genre, confidence=confidence)

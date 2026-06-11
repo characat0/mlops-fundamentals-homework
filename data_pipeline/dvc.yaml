@@ -1,18 +1,17 @@
 stages:
   load:
-    cmd: python src/load.py --source_path ${data.source_path} --output_path data/raw.csv
+    cmd: python src/load.py --source_path songs.csv --output_path data/raw.csv
     deps:
       - src/load.py
-      - ${data.source_path}
+      - songs.csv
     outs:
-      - data/raw.csv:
-          cache: false
+      - data/raw.csv
 
   process:
-    cmd: python src/process.py --input_path data/raw.csv --train_output data/train.csv --prod_output data/prod_sim.csv --year_threshold ${data.train_year_threshold}
+    cmd: python src/process.py --input_path data/raw.csv --train_output data/train.csv --prod_output data/prod_sim.csv --year_threshold 2010
     deps:
-      - data/raw.csv
       - src/process.py
+      - data/raw.csv
     outs:
       - data/train.csv
       - data/prod_sim.csv
@@ -20,19 +19,22 @@ stages:
   train:
     cmd: python src/train.py --data_path data/train.csv --params_path params.yaml
     deps:
-      - data/train.csv
       - src/train.py
-    params:
-      - train:
+      - data/train.csv
+      - params.yaml
     outs:
-      - models/:
-          cache: false
+      - models
 
   evaluate:
-    cmd: python src/evaluate.py --train_data data/train.csv
+    cmd: python src/evaluate.py --data_path data/prod_sim.csv --model_path models --params_path params.yaml
     deps:
       - src/evaluate.py
-      - models/
-    metrics:
-      - metrics.json:
-          cache: false
+      - data/prod_sim.csv
+      - models
+      - params.yaml
+    outs:
+      - metrics.json
+
+
+
+
