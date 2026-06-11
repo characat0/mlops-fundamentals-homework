@@ -1,0 +1,180 @@
+[1mdiff --git a/data_pipeline/src/evaluate.py b/data_pipeline/src/evaluate.py[m
+[1mindex 6cf4e23..6c37ed2 100644[m
+[1m--- a/data_pipeline/src/evaluate.py[m
+[1m+++ b/data_pipeline/src/evaluate.py[m
+[36m@@ -1,7 +1,6 @@[m
+ import mlflow[m
+ import json[m
+ import logging[m
+[31m-import os[m
+ [m
+ logging.basicConfig(level=logging.INFO)[m
+ logger = logging.getLogger(__name__)[m
+[36m@@ -23,12 +22,16 @@[m [mdef evaluate_and_register(train_data_path: str = "data/train.csv"):[m
+     """[m
+     logger.info("Evaluating models and registering the best one...")[m
+ [m
+[31m-    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")[m
+[31m-    mlflow.set_tracking_uri(tracking_uri)[m
+[32m+[m[32m    mlflow.set_tracking_uri([m
+[32m+[m[32m        "sqlite:///mlflow.db"[m
+[32m+[m[32m    )[m
+ [m
+     client = mlflow.tracking.MlflowClient()[m
+ [m
+[31m-    experiment = client.get_experiment_by_name(None) or client.get_experiment("0")[m
+[32m+[m[32m    experiment = client.get_experiment_by_name([m
+[32m+[m[32m        "spotify-genre-classifier"[m
+[32m+[m[32m    )[m
+[32m+[m
+     logger.info(f"Searching runs in experiment: {experiment.name}")[m
+ [m
+     runs = client.search_runs([m
+[36m@@ -48,9 +51,24 @@[m [mdef evaluate_and_register(train_data_path: str = "data/train.csv"):[m
+ [m
+     logger.info(f"Best run: {best_run.info.run_id} (accuracy={best_accuracy:.4f})")[m
+ [m
+[31m-    # TODO: Register the model and assign the 'champion' alias[m
+[31m-    #   1. Call client.create_model_version() to register model_uri under model_name[m
+[31m-    #   2. Call client.set_registered_model_alias() to tag that version as "champion"[m
+[32m+[m[32m    try:[m
+[32m+[m[32m        client.create_registered_model([m
+[32m+[m[32m            model_name[m
+[32m+[m[32m        )[m
+[32m+[m[32m    except Exception:[m
+[32m+[m[32m        pass[m
+[32m+[m
+[32m+[m[32m    model_version = client.create_model_version([m
+[32m+[m[32m        name=model_name,[m
+[32m+[m[32m        source=model_uri,[m
+[32m+[m[32m        run_id=best_run.info.run_id[m
+[32m+[m[32m    )[m
+[32m+[m
+[32m+[m[32m    client.set_registered_model_alias([m
+[32m+[m[32m        name=model_name,[m
+[32m+[m[32m        alias="champion",[m
+[32m+[m[32m        version=model_version.version[m
+[32m+[m[32m    )[m
+ [m
+     metrics = {[m
+         "best_run_id": best_run.info.run_id,[m
+[1mdiff --git a/data_pipeline/src/process.py b/data_pipeline/src/process.py[m
+[1mindex 0483f72..093fc95 100644[m
+[1m--- a/data_pipeline/src/process.py[m
+[1m+++ b/data_pipeline/src/process.py[m
+[36m@@ -36,16 +36,23 @@[m [mdef process_data([m
+     logger.info(f"Raw dataset shape: {df.shape}")[m
+     logger.info(f"Year range: {df['year'].min()}-{df['year'].max()}")[m
+ [m
+[31m-    # TODO: Split df into two DataFrames using boolean indexing on the 'year' column:[m
+[31m-    #   train_df — rows where year <= year_threshold[m
+[31m-    #   prod_df  — rows where year >  year_threshold[m
+[31m-    #[m
+[31m-    # Log the size of each split so you can sanity-check the ratio.[m
+[32m+[m[32m    # Split temporal[m
+[32m+[m[32m    train_df = df[df["year"] <= year_threshold][m
+[32m+[m[32m    prod_df = df[df["year"] > year_threshold][m
+ [m
+[31m-    # TODO: Save both splits to CSV (index=False).[m
+[31m-    #   Create parent directories first with os.makedirs(..., exist_ok=True).[m
+[31m-    #   train_df → train_output[m
+[31m-    #   prod_df  → prod_output[m
+[32m+[m[32m    logger.info(f"Train shape: {train_df.shape}")[m
+[32m+[m[32m    logger.info(f"Prod shape: {prod_df.shape}")[m
+[32m+[m
+[32m+[m[32m    # Crear directorios[m
+[32m+[m[32m    os.makedirs(os.path.dirname(train_output), exist_ok=True)[m
+[32m+[m[32m    os.makedirs(os.path.dirname(prod_output), exist_ok=True)[m
+[32m+[m
+[32m+[m[32m    # Guardar[m
+[32m+[m[32m    train_df.to_csv(train_output, index=False)[m
+[32m+[m[32m    prod_df.to_csv(prod_output, index=False)[m
+[32m+[m
+[32m+[m[32m    logger.info(f"Saved train data to {train_output}")[m
+[32m+[m[32m    logger.info(f"Saved prod data to {prod_output}")[m
+ [m
+ [m
+ if __name__ == "__main__":[m
+[1mdiff --git a/data_pipeline/src/train.py b/data_pipeline/src/train.py[m
+[1mindex 9a6c1fd..0154347 100644[m
+[1m--- a/data_pipeline/src/train.py[m
+[1m+++ b/data_pipeline/src/train.py[m
+[36m@@ -6,7 +6,7 @@[m [mimport logging[m
+ from sklearn.linear_model import LogisticRegression[m
+ from sklearn.preprocessing import StandardScaler, LabelEncoder[m
+ import xgboost as xgb[m
+[31m-import joblib[m
+[32m+[m[32mfrom sklearn.metrics import accuracy_score[m
+ [m
+ logging.basicConfig(level=logging.INFO)[m
+ logger = logging.getLogger(__name__)[m
+[36m@@ -48,27 +48,49 @@[m [mdef train(data_path: str, params: dict):[m
+     # FEATURE SELECTION:[m
+     # Students should select features from the Kaggle dataset.[m
+     # Drop all metadata and non-audio columns:[m
+[31m-    # You can use the lyrics column if you want, but it requires additional text processing and may not be[m
+[32m+[m[32m    # You can use the lyrics column if you want,[m
+[32m+[m[32m    # but it requires additional text processing and may not be[m
+     # necessary for good performance.[m
+     # Target is 'genre', features are audio features[m
+[31m-    X = df.drop(["genre", "year"], axis=1, errors='ignore')[m
+[32m+[m[32m    FEATURES = [[m
+[32m+[m[32m        "danceability",[m
+[32m+[m[32m        "energy",[m
+[32m+[m[32m        "key",[m
+[32m+[m[32m        "loudness",[m
+[32m+[m[32m        "mode",[m
+[32m+[m[32m        "speechiness",[m
+[32m+[m[32m        "acousticness",[m
+[32m+[m[32m        "instrumentalness",[m
+[32m+[m[32m        "liveness",[m
+[32m+[m[32m        "valence",[m
+[32m+[m[32m        "tempo",[m
+[32m+[m[32m        "duration_ms",[m
+[32m+[m[32m    ][m
+[32m+[m
+[32m+[m[32m    X = df[FEATURES][m
+     y = df["genre"][m
+ [m
+[31m-    logger.info(f"Features shape: {X.shape}, Target shape: {y.shape}")[m
+[32m+[m[32m    logger.info([m
+[32m+[m[32m        f"Features shape: {X.shape}, "[m
+[32m+[m[32m        f"Target shape: {y.shape}"[m
+[32m+[m[32m    )[m
+ [m
+     # ENCODING:[m
+[31m-    # Use LabelEncoder to encode genre labels numerically.[m
+[31m-    # The dataset has 10 distinct genre classes that need to be converted to integers (0-9).[m
+[31m-    # This is required for sklearn models which expect numeric target values.[m
+[31m-    # TODO: Encode genre labels (use LabelEncoder from sklearn)[m
+[32m+[m[32m    encoder = LabelEncoder()[m
+[32m+[m[32m    y_encoded = encoder.fit_transform(y)[m
+ [m
+     # SCALING:[m
+[31m-    # Use StandardScaler for LogisticRegression to standardize features (zero mean, unit variance).[m
+[31m-    # XGBoost handles feature scaling internally, so do NOT scale features when using XGBoost.[m
+[31m-    # This means you may need different scaling strategies per model type:[m
+[31m-    # - For LogisticRegression: scale the features before training[m
+[31m-    # - For XGBoost: use original (unscaled) features[m
+[31m-    # TODO: Scale features using StandardScaler[m
+[32m+[m[32m    scaler = StandardScaler()[m
+[32m+[m[32m    X_scaled = scaler.fit_transform(X)[m
+[32m+[m
+[32m+[m[32m    # MLFLOW[m
+[32m+[m[32m    mlflow.set_tracking_uri([m
+[32m+[m[32m        "sqlite:///mlflow.db"[m
+[32m+[m[32m    )[m
+[32m+[m
+[32m+[m[32m    mlflow.set_experiment([m
+[32m+[m[32m        "spotify-genre-classifier"[m
+[32m+[m[32m    )[m
+ [m
+     # Get hyperparameters[m
+     train_params = params.get("train", {})[m
+[36m@@ -106,19 +128,67 @@[m [mdef train(data_path: str, params: dict):[m
+     #         mlflow.sklearn.log_model(model, artifact_path="model")[m
+     #         # OR for XGBoost: mlflow.xgboost.log_model(model, artifact_path="model")[m
+ [m
+[31m-    # TODO: Loop through each model in train_params and:[m
+[31m-    #  1. Create appropriate model instance based on model_name:[m
+[31m-    #     - 'logistic_regression': Logis
