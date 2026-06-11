@@ -23,12 +23,6 @@ def process_data(
     The 2010 boundary marks Spotify's launch. Audio feature distributions shift
     significantly across this boundary — this is intentional, it's the drift
     students will detect in analyze_drift.py.
-
-    Args:
-        input_path: Path to raw dataset CSV (from load.py)
-        train_output: Path to save training split (year <= year_threshold)
-        prod_output: Path to save production split (year > year_threshold)
-        year_threshold: Year boundary (default 2010)
     """
     logger.info(f"Loading data from {input_path}...")
     df = pd.read_csv(input_path)
@@ -36,16 +30,23 @@ def process_data(
     logger.info(f"Raw dataset shape: {df.shape}")
     logger.info(f"Year range: {df['year'].min()}-{df['year'].max()}")
 
-    # TODO: Split df into two DataFrames using boolean indexing on the 'year' column:
-    #   train_df — rows where year <= year_threshold
-    #   prod_df  — rows where year >  year_threshold
-    #
-    # Log the size of each split so you can sanity-check the ratio.
+    # Split en función del año
+    train_df = df[df['year'] <= year_threshold]
+    prod_df = df[df['year'] > year_threshold]
 
-    # TODO: Save both splits to CSV (index=False).
-    #   Create parent directories first with os.makedirs(..., exist_ok=True).
-    #   train_df → train_output
-    #   prod_df  → prod_output
+    logger.info(f"Train split shape: {train_df.shape}")
+    logger.info(f"Prod split shape: {prod_df.shape}")
+
+    # Crear directorios si no existen
+    os.makedirs(os.path.dirname(train_output), exist_ok=True)
+    os.makedirs(os.path.dirname(prod_output), exist_ok=True)
+
+    # Guardar los CSV
+    train_df.to_csv(train_output, index=False)
+    prod_df.to_csv(prod_output, index=False)
+
+    logger.info(f"Saved train data to {train_output}")
+    logger.info(f"Saved prod data to {prod_output}")
 
 
 if __name__ == "__main__":
