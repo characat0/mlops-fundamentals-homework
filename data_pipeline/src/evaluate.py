@@ -28,7 +28,7 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
     client = mlflow.tracking.MlflowClient()
 
-    experiment = client.get_experiment_by_name(None) or client.get_experiment("0")
+    experiment = client.get_experiment("0")
     logger.info(f"Searching runs in experiment: {experiment.name}")
 
     runs = client.search_runs(
@@ -48,9 +48,20 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
     logger.info(f"Best run: {best_run.info.run_id} (accuracy={best_accuracy:.4f})")
 
-    # TODO: Register the model and assign the 'champion' alias
-    #   1. Call client.create_model_version() to register model_uri under model_name
-    #   2. Call client.set_registered_model_alias() to tag that version as "champion"
+    # Crear el modelo registrado si no existe
+    try:
+        client.create_registered_model(model_name)
+    except mlflow.exceptions.RestException:
+        pass
+
+    # Registrar el mejor modelo y marcarlo como champion
+    model_version = client.create_model_version(
+        name=model_name,
+        source=model_uri,
+        run_id=best_run.info.run_id,
+    )
+    client.set_registered_model_alias(model_name, "champion", model_version.version)
+    logger.info(f"Registrado {model_name} v{model_version.version} como @champion")
 
     metrics = {
         "best_run_id": best_run.info.run_id,

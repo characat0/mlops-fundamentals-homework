@@ -69,3 +69,17 @@ htmlcov/
 .tmp/
 tmp/
 *.log
+
+# uv / gestor de paquetes
+/pyproject.toml
+/uv.lock
+/.python-version
+/main.py
+
+# MLflow backend local
+mlflow.db
+*.db
+
+# Dataset extra y reportes de drift
+artists.csv
+*_drift_report.json
