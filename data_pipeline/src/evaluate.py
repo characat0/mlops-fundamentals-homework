@@ -28,7 +28,16 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
     client = mlflow.tracking.MlflowClient()
 
-    experiment = client.get_experiment_by_name(None) or client.get_experiment("0")
+    # Obtener el experimento actual
+    experiments = client.search_experiments()
+    if experiments:
+        experiment = experiments[0]
+    else:
+        # Crear experimento por defecto si no existe
+        experiment_id = client.create_experiment("Default")
+        experiment = client.get_experiment(experiment_id)
+
+    logger.info(f"Searching runs in experiment: {experiment.name}")
     logger.info(f"Searching runs in experiment: {experiment.name}")
 
     runs = client.search_runs(
@@ -51,6 +60,33 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
     # TODO: Register the model and assign the 'champion' alias
     #   1. Call client.create_model_version() to register model_uri under model_name
     #   2. Call client.set_registered_model_alias() to tag that version as "champion"
+    try:
+        # Crear o obtener modelo registrado
+        try:
+            client.get_registered_model(model_name)
+            logger.info(f"Model {model_name} already exists")
+        except:
+            client.create_registered_model(model_name)
+            logger.info(f"Created model {model_name}")
+        
+        # Crear versión del modelo
+        model_version = client.create_model_version(
+            name=model_name,
+            source=model_uri,
+            run_id=best_run.info.run_id
+        )
+        logger.info(f"Created model version: {model_version.version}")
+        
+        # Asignar alias 'champion'
+        client.set_registered_model_alias(
+            name=model_name,
+            alias="champion",
+            version=model_version.version
+        )
+        logger.info(f"Assigned alias 'champion' to version {model_version.version}")
+        
+    except Exception as e:
+        logger.error(f"Failed to register model: {e}")
 
     metrics = {
         "best_run_id": best_run.info.run_id,

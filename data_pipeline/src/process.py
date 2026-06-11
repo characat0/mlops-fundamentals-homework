@@ -39,6 +39,11 @@ def process_data(
     # TODO: Split df into two DataFrames using boolean indexing on the 'year' column:
     #   train_df — rows where year <= year_threshold
     #   prod_df  — rows where year >  year_threshold
+    train_df = df[df['year'] <= year_threshold]
+    prod_df = df[df['year'] > year_threshold]
+    
+    logger.info(f"Train split (year <= {year_threshold}): {len(train_df)} records")
+    logger.info(f"Production split (year > {year_threshold}): {len(prod_df)} records")
     #
     # Log the size of each split so you can sanity-check the ratio.
 
@@ -46,6 +51,13 @@ def process_data(
     #   Create parent directories first with os.makedirs(..., exist_ok=True).
     #   train_df → train_output
     #   prod_df  → prod_output
+    os.makedirs(os.path.dirname(train_output), exist_ok=True)
+    os.makedirs(os.path.dirname(prod_output), exist_ok=True)
+    train_df.to_csv(train_output, index=False)
+    prod_df.to_csv(prod_output, index=False)
+    
+    logger.info(f"Saved training data to {train_output}")
+    logger.info(f"Saved production data to {prod_output}")
 
 
 if __name__ == "__main__":
