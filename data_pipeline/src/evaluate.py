@@ -8,19 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 def evaluate_and_register(train_data_path: str = "data/train.csv"):
-    """
-    Find the best performing model and register it with @champion alias.
-
-    The scaffolding below handles connecting to MLflow and finding the best run.
-    Your job is to register that model in the MLflow Model Registry and assign
-    the 'champion' alias so the Dockerfile can pull it by name.
-
-    MLflow Model Registry API:
-        client.create_model_version(name, source, run_id)
-            -> returns a ModelVersion object with a .version attribute
-        client.set_registered_model_alias(name, alias, version)
-            -> assigns a named alias to a specific version
-    """
     logger.info("Evaluating models and registering the best one...")
 
     tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
@@ -48,9 +35,25 @@ def evaluate_and_register(train_data_path: str = "data/train.csv"):
 
     logger.info(f"Best run: {best_run.info.run_id} (accuracy={best_accuracy:.4f})")
 
-    # TODO: Register the model and assign the 'champion' alias
-    #   1. Call client.create_model_version() to register model_uri under model_name
-    #   2. Call client.set_registered_model_alias() to tag that version as "champion"
+    try:
+        client.create_registered_model(model_name)
+        logger.info(f"Created registered model: {model_name}")
+    except Exception:
+        logger.info(f"Model '{model_name}' already exists in registry.")
+
+    model_version = client.create_model_version(
+        name=model_name,
+        source=model_uri,
+        run_id=best_run.info.run_id
+    )
+    logger.info(f"Registered model version: {model_version.version}")
+
+    client.set_registered_model_alias(
+        name=model_name,
+        alias="champion",
+        version=model_version.version
+    )
+    logger.info(f"Set alias '@champion' -> version {model_version.version}")
 
     metrics = {
         "best_run_id": best_run.info.run_id,
