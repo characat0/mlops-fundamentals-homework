@@ -2,22 +2,16 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# ARG para MLflow URI
+ARG MLFLOW_TRACKING_URI=http://localhost:5000
+
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-# TODO: Pull the @champion model from MLflow and bake it into the image.
-#
-# The model was registered in evaluate.py with the alias "champion".
-# Use the mlflow CLI to download it here so the container is self-contained
-# and doesn't need a live MLflow server at runtime.
-#
-# Hint:
-#   ARG MLFLOW_TRACKING_URI=http://localhost:5000
-#   RUN mlflow models download -m "models:/spotify-genre-classifier@champion" \
-#       -d ./models --no-directory
-#
-# After this step, load the model in predict_genre() using:
-#   mlflow.sklearn.load_model("./models")
+# DESCARGAR MODELO durante build
+RUN mlflow models download \
+    --model-uri "models:/spotify-genre-classifier@champion" \
+    --dst-path ./models
 
 COPY ./app ./app
 RUN touch /app/app/__init__.py

@@ -1,0 +1,39 @@
+schema: '2.0'
+stages:
+  load:
+    cmd: python src/load.py --source_path songs.csv --output_path data/raw.csv
+    deps:
+    - path: songs.csv
+      hash: md5
+      md5: 0e71e2c46244acac485bd8c245aa6e56
+      size: 856462614
+    - path: src/load.py
+      hash: md5
+      md5: e2ff570080c6b2a9c1f1f1ad886decb0
+      size: 1243
+    outs:
+    - path: data/raw.csv
+      hash: md5
+      md5: f8f053340da02999fa4579cf45ba5f15
+      size: 856462611
+  process:
+    cmd: python src/process.py --input_path data/raw.csv --train_output 
+      data/train.csv --prod_output data/prod_sim.csv --year_threshold 2010
+    deps:
+    - path: data/raw.csv
+      hash: md5
+      md5: f8f053340da02999fa4579cf45ba5f15
+      size: 856462611
+    - path: src/process.py
+      hash: md5
+      md5: c382b111261fcb75b3f417ead0401e8b
+      size: 2811
+    outs:
+    - path: data/prod_sim.csv
+      hash: md5
+      md5: 4b289cd25fac914795a44c643b4fcfc6
+      size: 442108917
+    - path: data/train.csv
+      hash: md5
+      md5: 7f8a6e8096f29ac43fea4db2b7578d83
+      size: 414353934
