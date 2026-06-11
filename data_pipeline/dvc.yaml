@@ -9,7 +9,12 @@ stages:
           cache: false
 
   process:
-    cmd: python src/process.py --input_path data/raw.csv --train_output data/train.csv --prod_output data/prod_sim.csv --year_threshold ${data.train_year_threshold}
+    cmd: >
+      python src/process.py
+      --input_path data/raw.csv
+      --train_output data/train.csv
+      --prod_output data/prod_sim.csv
+      --year_threshold ${data.train_year_threshold}
     deps:
       - data/raw.csv
       - src/process.py
@@ -23,16 +28,16 @@ stages:
       - data/train.csv
       - src/train.py
     params:
-      - train:
+      - train
     outs:
-      - models/:
+      - models:
           cache: false
 
   evaluate:
     cmd: python src/evaluate.py --train_data data/train.csv
     deps:
       - src/evaluate.py
-      - models/
+      - models
     metrics:
       - metrics.json:
           cache: false

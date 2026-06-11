@@ -1,29 +1,64 @@
-from fastapi import FastAPI, HTTPException, Request
-from pydantic import BaseModel
 import json
 import logging
 import os
+from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
+from typing import Any
+
+import mlflow.pyfunc
+import pandas as pd
+from fastapi import FastAPI, HTTPException, Request
+from pydantic import BaseModel
+
 
 app = FastAPI(title="Spotify Genre Classifier API", version="1.0.0")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+FEATURE_NAMES = [
+    "danceability",
+    "energy",
+    "key",
+    "loudness",
+    "mode",
+    "speechiness",
+    "acousticness",
+    "instrumentalness",
+    "liveness",
+    "valence",
+    "tempo",
+    "duration_ms",
+]
 
-# TODO: Define the SpotifyFeatures Pydantic model.
-#
-# Include the audio feature fields from the Kaggle dataset, with the correct
-# Python types. The field names must match the column names exactly
-# (the tests send a payload with these exact keys).
-#
-# Example fields and types:
-#   danceability (float), energy (float), key (int), loudness (float),
-#   mode (int), speechiness (float), acousticness (float),
-#   instrumentalness (float), liveness (float), valence (float),
-#   tempo (float), duration_ms (int)
+GENRE_LABELS = [
+    "Blues",
+    "Classical",
+    "Country",
+    "Electronic",
+    "Folk",
+    "Hip-Hop",
+    "Jazz",
+    "Pop",
+    "R&B",
+    "Rock",
+]
+
+
 class SpotifyFeatures(BaseModel):
-    pass
+    danceability: float
+    energy: float
+    key: int
+    loudness: float
+    mode: int
+    speechiness: float
+    acousticness: float
+    instrumentalness: float
+    liveness: float
+    valence: float
+    tempo: float
+    duration_ms: int
 
 
 class PredictionResponse(BaseModel):
@@ -31,81 +66,103 @@ class PredictionResponse(BaseModel):
     confidence: float = 0.0
 
 
+@lru_cache(maxsize=1)
+def load_model() -> Any:
+    """Load the MLflow model baked into the Docker image or local ./models path."""
+    model_path = os.getenv("MODEL_PATH", "./models")
+    mlmodel_path = Path(model_path) / "MLmodel"
+
+    if not mlmodel_path.exists():
+        logger.warning("Model not found at %s. Using fallback response.", model_path)
+        return None
+
+    logger.info("Loading MLflow model from %s", model_path)
+    return mlflow.pyfunc.load_model(model_path)
+
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """
-    Log all incoming /predict requests to logs/api_requests.jsonl.
+    """Log incoming prediction requests as JSONL for drift monitoring."""
+    if request.method == "POST" and request.url.path == "/predict":
+        body_bytes = await request.body()
 
-    Logging here (middleware) rather than inside the endpoint keeps
-    observability separate from business logic — easier to disable, test,
-    and extend (rate limiting, metrics) without touching endpoint code.
+        try:
+            payload = json.loads(body_bytes.decode("utf-8")) if body_bytes else {}
+            if isinstance(payload, dict):
+                payload["timestamp"] = datetime.utcnow().isoformat()
 
-    TODO:
-      1. Only log POST requests to "/predict"
-      2. Read the body: body_bytes = await request.body()
-      3. Parse as JSON, add a "timestamp" field (datetime.utcnow().isoformat())
-      4. Append a JSON line to logs/api_requests.jsonl (create logs/ if needed)
-      5. Reconstruct the request so the endpoint can still read it:
-             async def receive():
-                 return {"type": "http.request", "body": body_bytes}
-             request = Request(request.scope, receive)
-      6. Call response = await call_next(request) and return it
-    """
+                logs_dir = Path("logs")
+                logs_dir.mkdir(parents=True, exist_ok=True)
+
+                with open(logs_dir / "api_requests.jsonl", "a", encoding="utf-8") as f:
+                    f.write(json.dumps(payload) + "\n")
+
+        except json.JSONDecodeError:
+            logger.warning("Could not parse request body as JSON.")
+
+        async def receive():
+            return {
+                "type": "http.request",
+                "body": body_bytes,
+                "more_body": False,
+            }
+
+        request = Request(request.scope, receive)
+
     response = await call_next(request)
     return response
 
 
-# TODO: Implement the GET /health endpoint.
-#   It should return {"status": "healthy"} with a 200 status code.
-#   This is used by load balancers and CI checks to verify the API is up.
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
 
 
 @app.post("/predict", response_model=PredictionResponse)
 def predict(features: SpotifyFeatures) -> PredictionResponse:
     """Predict Spotify track genre from audio features."""
     try:
-        prediction = predict_genre(features)
-        return prediction
-    except Exception as e:
-        logger.error(f"Prediction failed: {str(e)}")
-        raise HTTPException(status_code=500, detail="Prediction failed")
+        return predict_genre(features)
+    except Exception as exc:
+        logger.exception("Prediction failed: %s", exc)
+        raise HTTPException(status_code=500, detail="Prediction failed") from exc
+
+
+def _map_prediction_to_genre(raw_prediction: Any) -> str:
+    if isinstance(raw_prediction, str):
+        if raw_prediction.isdigit():
+            index = int(raw_prediction)
+            if 0 <= index < len(GENRE_LABELS):
+                return GENRE_LABELS[index]
+        return raw_prediction
+
+    try:
+        index = int(raw_prediction)
+        if 0 <= index < len(GENRE_LABELS):
+            return GENRE_LABELS[index]
+    except (TypeError, ValueError):
+        pass
+
+    return str(raw_prediction)
 
 
 def predict_genre(features: SpotifyFeatures) -> PredictionResponse:
-    """
-    **IMPORTANT: This is an intentionally incomplete skeleton for students to implement.**
+    """Run model inference and return genre plus confidence."""
+    model = load_model()
 
-    Students must:
-    1. Load the MLflow model registered with the @champion alias
-       - The model is baked into the Docker container at ./models/
-       - Use: mlflow.sklearn.load_model("./models")
-    2. Convert SpotifyFeatures to the format expected by the model
-       - Extract feature values in the correct order (order matters for sklearn models)
-       - Must match the audio features used during training
-    3. Perform inference on the audio features
-    4. Map the predicted class index back to genre name
-    5. Return a PredictionResponse with the genre and confidence score
+    if model is None:
+        return PredictionResponse(genre="Pop", confidence=0.0)
 
-    Example implementation structure:
-        import mlflow
+    payload = features.model_dump()
+    input_df = pd.DataFrame([[payload[name] for name in FEATURE_NAMES]], columns=FEATURE_NAMES)
 
-        model = mlflow.sklearn.load_model("./models")
+    prediction = model.predict(input_df)
+    genre = _map_prediction_to_genre(prediction[0])
 
-        feature_names = [
-            'danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness',
-            'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'duration_ms'
-        ]
-        feature_vector = [getattr(features, name) for name in feature_names]
-
-        prediction = model.predict([feature_vector])
-        probabilities = model.predict_proba([feature_vector])
+    confidence = 0.0
+    predict_fn = getattr(model, "predict_proba", None)
+    if callable(predict_fn):
+        probabilities = model.predict_proba(input_df)
         confidence = float(probabilities[0].max())
 
-        # Map numeric class index back to genre label using the LabelEncoder
-        # you saved during training, or hardcode the genre list if consistent.
-
-        return PredictionResponse(genre=predicted_genre, confidence=confidence)
-
-    For now, returns a placeholder so API tests pass:
-    """
-    return PredictionResponse(genre="Pop", confidence=0.85)
+    return PredictionResponse(genre=genre, confidence=confidence)

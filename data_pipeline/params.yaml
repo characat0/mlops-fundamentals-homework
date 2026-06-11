@@ -1,8 +1,6 @@
 data:
-  # 550k Spotify Songs (Kaggle) - Downloaded as CSV
-  # https://www.kaggle.com/datasets/serkantysz/550k-spotify-songs-audio-lyrics-and-genres
-  source_path: "songs.csv"  # Downloaded CSV file
-  train_year_threshold: 2010  # Pre-2010 = training, Post-2010 = production simulation (streaming era shift)
+  source_path: "songs.csv"
+  train_year_threshold: 2010
 
 train:
   logistic_regression:

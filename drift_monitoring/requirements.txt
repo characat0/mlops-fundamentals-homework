@@ -1,3 +1,2 @@
 pandas>=2.0.0
 scipy>=1.10.0
-# Add evidently or other drift libraries if desired

@@ -69,3 +69,15 @@ htmlcov/
 .tmp/
 tmp/
 *.log
+
+# Local data and artifacts
+.venv/
+venv/
+mlruns/
+mlartifacts/
+mlflow.db
+data_pipeline/songs.csv
+data_pipeline/data/
+data_pipeline/models/
+model_serving/logs/
+drift_monitoring/*_drift_report.json
