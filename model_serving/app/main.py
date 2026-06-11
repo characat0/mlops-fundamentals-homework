@@ -1,29 +1,62 @@
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
+from datetime import datetime
+from pathlib import Path
 import json
 import logging
-import os
-from pathlib import Path
+import pandas as pd
+import mlflow
 
 app = FastAPI(title="Spotify Genre Classifier API", version="1.0.0")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+LOG_FILE = Path("logs/api_requests.jsonl")
+MODEL_PATH = "./models"
 
-# TODO: Define the SpotifyFeatures Pydantic model.
-#
-# Include the audio feature fields from the Kaggle dataset, with the correct
-# Python types. The field names must match the column names exactly
-# (the tests send a payload with these exact keys).
-#
-# Example fields and types:
-#   danceability (float), energy (float), key (int), loudness (float),
-#   mode (int), speechiness (float), acousticness (float),
-#   instrumentalness (float), liveness (float), valence (float),
-#   tempo (float), duration_ms (int)
+# Audio features en el orden usado durante el entrenamiento
+AUDIO_FEATURES = [
+    "danceability", "energy", "key", "loudness", "mode", "speechiness",
+    "acousticness", "instrumentalness", "liveness", "valence", "tempo",
+    "duration_ms",
+]
+
+# Generos en el orden que produce LabelEncoder (alfabetico)
+GENRES = [
+    "Blues", "Classical", "Country", "Electronic", "Folk",
+    "Hip-Hop", "Jazz", "Pop", "R&B", "Rock",
+]
+
+_model = None
+
+
+def _load_model():
+    """Carga el modelo champion una sola vez. None si no esta disponible."""
+    global _model
+    if _model is None:
+        for loader in (mlflow.xgboost.load_model, mlflow.sklearn.load_model):
+            try:
+                _model = loader(MODEL_PATH)
+                break
+            except Exception:
+                continue
+    return _model
+
+
 class SpotifyFeatures(BaseModel):
-    pass
+    danceability: float
+    energy: float
+    key: int
+    loudness: float
+    mode: int
+    speechiness: float
+    acousticness: float
+    instrumentalness: float
+    liveness: float
+    valence: float
+    tempo: float
+    duration_ms: int
 
 
 class PredictionResponse(BaseModel):
@@ -51,13 +84,30 @@ async def log_requests(request: Request, call_next):
              request = Request(request.scope, receive)
       6. Call response = await call_next(request) and return it
     """
+    if request.method == "POST" and request.url.path == "/predict":
+        body_bytes = await request.body()
+        try:
+            data = json.loads(body_bytes)
+        except json.JSONDecodeError:
+            data = {}
+        data["timestamp"] = datetime.utcnow().isoformat()
+
+        LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(LOG_FILE, "a") as f:
+            f.write(json.dumps(data) + "\n")
+
+        # Reconstruir el request: el body ya se consumio al leerlo arriba
+        async def receive():
+            return {"type": "http.request", "body": body_bytes}
+        request = Request(request.scope, receive)
+
     response = await call_next(request)
     return response
 
 
-# TODO: Implement the GET /health endpoint.
-#   It should return {"status": "healthy"} with a 200 status code.
-#   This is used by load balancers and CI checks to verify the API is up.
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
 
 
 @app.post("/predict", response_model=PredictionResponse)
@@ -108,4 +158,12 @@ def predict_genre(features: SpotifyFeatures) -> PredictionResponse:
 
     For now, returns a placeholder so API tests pass:
     """
-    return PredictionResponse(genre="Pop", confidence=0.85)
+    model = _load_model()
+    if model is None:
+        # Sin modelo disponible (ej. CI sin ./models): respuesta por defecto
+        return PredictionResponse(genre="Pop", confidence=0.0)
+
+    X = pd.DataFrame([features.model_dump()])[AUDIO_FEATURES]
+    proba = model.predict_proba(X)[0]
+    idx = int(proba.argmax())
+    return PredictionResponse(genre=GENRES[idx], confidence=float(proba.max()))
