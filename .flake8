@@ -1,7 +1,20 @@
 [flake8]
 max-line-length = 100
 extend-ignore = E203
+exclude =
+    .git,
+    .venv,
+    venv,
+    env,
+    __pycache__,
+    .pytest_cache,
+    data,
+    models,
+    mlruns,
+    logs
 
 per-file-ignores =
-    # Scaffold imports provided for students to use in their TODO implementations
+    # Scaffold imports provided for students to use in their implementations
     model_serving/app/main.py: F401
+    data_pipeline/tests/*.py: F401,E501
+    model_serving/tests/*.py: F401,E501

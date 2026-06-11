@@ -1,7 +1,8 @@
 import argparse
-import os
-import pandas as pd
 import logging
+import os
+
+import pandas as pd
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,10 +21,6 @@ def process_data(
     - train (year <= threshold): pre-streaming era (CD/iTunes)
     - prod  (year >  threshold): streaming era (Spotify/Apple Music)
 
-    The 2010 boundary marks Spotify's launch. Audio feature distributions shift
-    significantly across this boundary — this is intentional, it's the drift
-    students will detect in analyze_drift.py.
-
     Args:
         input_path: Path to raw dataset CSV (from load.py)
         train_output: Path to save training split (year <= year_threshold)
@@ -36,16 +33,20 @@ def process_data(
     logger.info(f"Raw dataset shape: {df.shape}")
     logger.info(f"Year range: {df['year'].min()}-{df['year'].max()}")
 
-    # TODO: Split df into two DataFrames using boolean indexing on the 'year' column:
-    #   train_df — rows where year <= year_threshold
-    #   prod_df  — rows where year >  year_threshold
-    #
-    # Log the size of each split so you can sanity-check the ratio.
+    train_df = df[df["year"] <= year_threshold].copy()
+    prod_df = df[df["year"] > year_threshold].copy()
 
-    # TODO: Save both splits to CSV (index=False).
-    #   Create parent directories first with os.makedirs(..., exist_ok=True).
-    #   train_df → train_output
-    #   prod_df  → prod_output
+    logger.info(f"Training split shape: {train_df.shape}")
+    logger.info(f"Production simulation split shape: {prod_df.shape}")
+
+    os.makedirs(os.path.dirname(train_output), exist_ok=True)
+    os.makedirs(os.path.dirname(prod_output), exist_ok=True)
+
+    train_df.to_csv(train_output, index=False)
+    prod_df.to_csv(prod_output, index=False)
+
+    logger.info(f"Saved training data to {train_output}")
+    logger.info(f"Saved production simulation data to {prod_output}")
 
 
 if __name__ == "__main__":
